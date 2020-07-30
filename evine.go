@@ -53,7 +53,7 @@ type Options struct {
 	Keys 			   []string
 	InScopeDomains	   []string
 }
-// Result structure
+
 type Results struct {
 	Pages 			string
 	PageByURL		map[string]string
@@ -71,7 +71,7 @@ type Results struct {
 	HostNames		[]string
 	RegMaches       map[string][]string
 }
-// Program defination
+// Program definitions
 type def struct {
 	currentPage 	    string
 	currentPageIndex	int
@@ -104,6 +104,7 @@ type responseEditor struct {
 }
 
 var (
+	// Initial OPTIONS
 	OPTIONS = &Options{}
 	// To identify media postfixes
 	MEDIA_POSTFIX = []string{"aa", "aac", "aif", "aiff", "amr", "amv", "amz", "ape", "asc", "asf", "au", "bash", "bat", "bmp", "c",
@@ -243,12 +244,12 @@ func request(uri string) (string, int, error) {
 }
 // Crawling the robots.txt URLs as seed
 func crawlRobots() []string {
-	text, status_code, ok := request(fmt.Sprintf("%s://%s/robots.txt", OPTIONS.Scheme, PROJECT_NAME))
+	text, statusCode, ok := request(fmt.Sprintf("%s://%s/robots.txt", OPTIONS.Scheme, PROJECT_NAME))
 	
 	if ok != nil{
 		return []string{}
 	}
-	if status_code == 200{
+	if statusCode == 200{
 		var reg *regexp.Regexp
 		makers := []string{}
 		// It find all of URLs without any restrict
@@ -264,18 +265,18 @@ func crawlRobots() []string {
 }
 // Crawling the sitemap.xml URLs as seed
 func crawlSitemap() []string {
-	text, status_code, ok := request(fmt.Sprintf("%s://%s/sitemap.xml", OPTIONS.Scheme, PROJECT_NAME))
+	text, statusCode, ok := request(fmt.Sprintf("%s://%s/sitemap.xml", OPTIONS.Scheme, PROJECT_NAME))
 	if ok != nil {
 		return []string{}
 	}
 	reg := regexp.MustCompile(`<loc>(.*?)</loc>`)
-	if status_code == 200 {
-		makers := reg.FindAllStringSubmatch(text, -1)
-		new_makers := []string{}
-		for _,v := range makers {
-			new_makers = append(new_makers, v[1])
+	if statusCode == 200 {
+		founds := reg.FindAllStringSubmatch(text, -1)
+		out := []string{}
+		for _,v := range founds {
+			out = append(out, v[1])
 		}
-		return new_makers
+		return out
 	}
 	return []string{}
 }
@@ -489,7 +490,7 @@ func parseOptions() {
 	flag.StringVar(&OPTIONS.RegexString, "regex", "", "Search the Regular Expression on the pages")
 	flag.StringVar(&OPTIONS.Scheme, "scheme", "https", "Set the scheme for the requests")
 	flag.IntVar(&OPTIONS.Depth, "depth", 1, "Scraper depth search level")
-	flag.StringVar(&OPTIONS.URLExclude, "url-exclude", ".*", "Exclude URLs maching with this regex")
+	flag.StringVar(&OPTIONS.URLExclude, "url-exclude", ".*", "Exclude URLs matching with this regex")
 	flag.StringVar(&OPTIONS.StatusCodeExclude, "code-exclude", ".*", "Exclude HTTP status code with these codes. Separate whit '|'")
 	flag.StringVar(&OPTIONS.InScopeExclude, "domain-exclude", "", "Exclude in-scope domains to crawl. Separate with comma | default=root domain")
 	flag.Parse()
@@ -504,7 +505,12 @@ func parseOptions() {
 }
 // Return the options to the option view as text
 func optionsCode() string {
-	B2S := func(b bool)(string){if b==true{return "true"}else{return "false"}}
+	B2S := func(b bool)(string){
+		if b==true {
+			return "true"
+		}
+		return "false"
+	}
 	return fmt.Sprintf("thread,depth,delay,timeout,maxRegexResult=%d,%d,%d,%d,%d\nrobots,sitemap=%s,%s\nurlExclude=%s\ncodeExclude=%s\ndomainExclude=%s\nproxy=%s",
 		OPTIONS.Thread, OPTIONS.Depth, OPTIONS.Delay, OPTIONS.Timeout, OPTIONS.MaxRegexResult,
 		B2S(OPTIONS.Robots), B2S(OPTIONS.Sitemap), OPTIONS.URLExclude, 
@@ -512,7 +518,12 @@ func optionsCode() string {
 }
 // Read the options from the option View and set them
 func prepareOptions() string {
-	S2B := func(v string)(bool){if v=="true"{return true}else{return false}}
+	S2B := func(v string)(bool){
+		if v == "true" {
+			return true
+		}
+		return false
+	}
 	code := trim(VIEWS_OBJ["OPTIONS"].Buffer())
 	if !toBool(code){
 		return "Options are incomplete. Press Ctrl+R to rewrite options."
@@ -520,9 +531,9 @@ func prepareOptions() string {
 	for k,line := range strings.Split(code, "\n") {
 		split := strings.Split(line, "=")
 		values := strings.Join(split[1:], "=")
-		splited_values := strings.Split(values, ",")
-		// if
-		if len(splited_values) != len(strings.Split(split[0], ",")) {
+		splited := strings.Split(values, ",")
+		// If count of the variables doesn't match with values
+		if len(splited) != len(strings.Split(split[0], ",")) {
 			return "Options are incomplete: All int and bool options must be set. Press Ctrl+R to rewrite options."
 		}
 		switch k{
@@ -531,15 +542,15 @@ func prepareOptions() string {
 				var k int
 				var v *int
 				for k,v = range []*int{&OPTIONS.Thread,&OPTIONS.Depth,&OPTIONS.Delay,&OPTIONS.Timeout,&OPTIONS.MaxRegexResult} {
-					if i,err := strconv.Atoi(splited_values[k]);err == nil {
+					if i,err := strconv.Atoi(splited[k]);err == nil {
 						*v = i
 					} else {
-						return fmt.Sprintf("Invalid value for type int: %s.", splited_values[k])
+						return fmt.Sprintf("Invalid value for type int: %s.", splited[k])
 					}
 				}
 			// Set the boolean variables
 			case 1:
-				OPTIONS.Robots,OPTIONS.Sitemap = S2B(splited_values[0]),S2B(splited_values[1])
+				OPTIONS.Robots,OPTIONS.Sitemap = S2B(splited[0]),S2B(splited[1])
 			// Set the urlExclude,.. variables
 			case 2:
 				OPTIONS.URLExclude = values
@@ -576,17 +587,17 @@ func toBool(arg interface{}) bool {
 	case rune:
 		return true
 	default:
-		to_str, ok := arg.([]string)
+		tostr, ok := arg.([]string)
 		if ok{
-			return toBool(len(to_str))
+			return toBool(len(tostr))
 		}
-		to_int, ok := arg.([]int)
+		toint, ok := arg.([]int)
 		if ok{
-			return toBool(len(to_int))
+			return toBool(len(toint))
 		}
-		to_flag, ok := arg.([]bool)
+		toflag, ok := arg.([]bool)
 		if ok{
-			return toBool(len(to_flag))
+			return toBool(len(toflag))
 		}
 	}	
 	return false
@@ -594,14 +605,14 @@ func toBool(arg interface{}) bool {
 // Print the slices
 func slicePrint(head string, s []string) {
 	pushing(head)
-	for _,v := range s {
-		pushing(v)
+	for v := range s {
+		pushing(s[v])
 	}
 }
 // Print the maps
 func mapPrint(head string, m map[string]bool) {
 	pushing(head)
-	for k,_ := range m {
+	for k := range m {
 		pushing(fmt.Sprintf("    %s", k))
 	}
 }
@@ -708,11 +719,11 @@ func urjoin(baseurl, uri string) string {
 	if err != nil {
 		return ""
 	}
-	final_url,err := base.Parse(uri)
+	final,err := base.Parse(uri)
 	if err != nil{
 		return ""
 	}
-	return final_url.String()
+	return final.String()
 }
 // Remove URL scheme and replace it with default scheme and 
 // removes last slash
@@ -743,7 +754,7 @@ func urlSanitize(uri string) string {
 // Identify the type of URL and sanitize the URLs.
 // Then it returns the URLs that can be scrape
 func urlCategory(urls []string) []string {
-	out_urls := []string{}
+	spool := []string{}
 	var join string
 	var broke int
 	// Sometimes the program is broken with runtime error
@@ -811,9 +822,9 @@ func urlCategory(urls []string) []string {
 		if !RESULTS.URLs[join] {
 			RESULTS.URLs[join] = true
 		}
-		uniq(&out_urls, join)
+		uniq(&spool, join)
 	}
-	return out_urls
+	return spool
 }
 // Clean the comments from the page source
 func removeComments(text string) string {
@@ -1078,12 +1089,12 @@ func initKeybindings(g *gocui.Gui) error {
 	if err := g.SetKeybinding("REGEX", gocui.KeyEnter, gocui.ModNone,
 		func(_ *gocui.Gui, v *gocui.View) error {
 			prepareOptions()
-			reg_str := strings.TrimSpace(v.Buffer())
+			regex := strings.TrimSpace(v.Buffer())
 			vrb := VIEWS_OBJ["RESPONSE"]
 			PROG.currentPage = vrb.Buffer()
 			vrb.Clear()
 			// Checking regex
-			reg, err := regexp.Compile(reg_str)
+			reg, err := regexp.Compile(regex)
 			if err != nil {
 				fmt.Fprintf(vrb, fmt.Sprintf("Invalid Regex: %v", err))
 				return nil
@@ -1163,14 +1174,14 @@ func (e responseEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Mo
 // Find all of href|src attribute values as URL. It's not limited just a[href]
 func getURLs(text string) []string {
 	text = removeComments(text)
-	tag_reg := regexp.MustCompile(`<|>|/>`)
+	sanitizeTags := regexp.MustCompile(`<|>|/>`)
 	reg := regexp.MustCompile(`(href|src)\s*?=\s*['"](/?.*?)['"]|['"](http.*?)['"]`)
 	find := reg.FindAllString(text, -1)
 	links := []string{}
-	rep_prefix := regexp.MustCompile(`(href|src)\s*?=\s*`)
+	repPrefix := regexp.MustCompile(`(href|src)\s*?=\s*`)
 	for _,v := range find {
-		if v != "" && !tag_reg.MatchString(v) {
-			v = rep_prefix.ReplaceAllString(v, ``)
+		if v != "" && !sanitizeTags.MatchString(v) {
+			v = repPrefix.ReplaceAllString(v, ``)
 			links = append(links, strings.ReplaceAll(strings.ReplaceAll(v, "'",""), "\"", ""))
 		}
 	}
@@ -1182,20 +1193,20 @@ func getSource(uri string) ([]string, error) {
 		return []string{}, nil
 	}
 	time.Sleep(time.Duration(OPTIONS.Delay) * time.Millisecond)
-	text, status_code, ok := request(uri)
-	if ok != nil {
-		return []string{}, ok
+	text, statusCode, er := request(uri)
+	if er != nil {
+		return []string{}, er
 	}
-	if !statusCodeExcluding(status_code){
+	if !statusCodeExcluding(statusCode){
 		return []string{}, nil
 	}
 	putting(VIEWS_OBJ["RESPONSE"], " > " + uri)
 	RESULTS.Pages += text
 	RESULTS.PageByURL[uri] = text
-	all_links := getURLs(text)
-	all_links = urlCategory(all_links)
+	allURLs := getURLs(text)
+	allURLs = urlCategory(allURLs)
 	refStatusLine(fmt.Sprintf("[Elapsed:%fs] | [Obtained:%d] | [%s]", sinceTime(), len(RESULTS.URLs), uri))
-	return all_links, nil
+	return allURLs, nil
 }
 // Crawling process for each seed
 func crawl(uri string) []string {
@@ -1213,11 +1224,11 @@ func crawl(uri string) []string {
 }
 // Run the crawler
 func crawlIO() error {
-	resp_obj := VIEWS_OBJ["RESPONSE"]
+	respObj := VIEWS_OBJ["RESPONSE"]
 	// Clear the Response values
-	resp_obj.Clear()
+	respObj.Clear()
 	if err := prepareOptions(); err != "" {
-		fmt.Fprintf(resp_obj, err)
+		fmt.Fprintf(respObj, err)
 		return nil
 	}
 	// Start the time
@@ -1275,12 +1286,12 @@ func crawlIO() error {
 		if OPTIONS.Sitemap {
 			anseeds = append(anseeds, crawlSitemap()...)
 		}
-		if OPTIONS.Depth <= 1 {
-			urlCategory(anseeds)
-			PROG.currentPage = resp_obj.Buffer()
-			return nil
-		} else {
+		if OPTIONS.Depth > 1 {
 			seeds = append(seeds, urlCategory(anseeds)...)
+		} else {
+			urlCategory(anseeds)
+			PROG.currentPage = respObj.Buffer()
+			return nil
 		}
 		PROG.Gui.Update(func(g *gocui.Gui) error {
 			g.DeleteView("LOADER")
@@ -1303,7 +1314,7 @@ func crawlIO() error {
 		}
 		return nil
 	}()
-	PROG.currentPage = resp_obj.Buffer()
+	PROG.currentPage = respObj.Buffer()
 	// Refresh the status line. the status line shows the elapsed time as second and obtained URLs
 	refStatusLine(fmt.Sprintf("[Elapsed:%fs] | [Obtained:%d] | [%s]", sinceTime(), len(RESULTS.URLs), PROJECT_NAME))
 	return nil
@@ -1362,7 +1373,7 @@ func outcomeIO() {
 			}
 			if !sliceSearch(&ALL_KEYS, q) {
 				pushing("[*] '." + q + "'")
-				for k,_ := range RESULTS.Medias{
+				for k := range RESULTS.Medias{
 					if checkPostfix(q, k) {
 						pushing(k)
 					}
