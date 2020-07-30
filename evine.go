@@ -1,16 +1,17 @@
-// Evine, Copyright 2020.
-// This program is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// any later version.
+/* Evine, Copyright 2020.
+	This program is free software: you can redistribute it and/or modify
+	it under the terms of the GNU General Public License as published by
+	the Free Software Foundation, either version 3 of the License, or
+	any later version.
 
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+	This program is distributed in the hope that it will be useful,
+	but WITHOUT ANY WARRANTY; without even the implied warranty of
+	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+	GNU General Public License for more details.
 
-// You should have received a copy of the GNU General Public License
-// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+	You should have received a copy of the GNU General Public License
+	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+*/
 
 package main
 
@@ -751,8 +752,8 @@ func urlSanitize(uri string) string {
 	}
 	return uri
 }
-// Identify the type of URL and sanitize the URLs.
-// Then it returns the URLs that can be scrape
+/* Identify the type of URL and sanitize the URLs.
+ Then it returns the URLs that can be scrape. */
 func urlCategory(urls []string) []string {
 	spool := []string{}
 	var join string
@@ -829,7 +830,7 @@ func urlCategory(urls []string) []string {
 // Clean the comments from the page source
 func removeComments(text string) string {
 	reg := regexp.MustCompile(`<!--([\s\S]*?)-->`)
-	reg2 := regexp.MustCompile(`/\*([\s\S]*?)\*/`)
+	reg2 := regexp.MustCompile(`/\*([\s\S]*?)\`)
 	text = reg.ReplaceAllString(text, ``)
 	text = reg2.ReplaceAllString(text, ``)
 	return text
@@ -974,6 +975,7 @@ func layout(g *gocui.Gui) error {
 	}
 	return nil
 }
+
 // Define Keyboard Events
 func initKeybindings(g *gocui.Gui) error {
 	// To exit from the program: Ctrl+Z
@@ -1319,8 +1321,10 @@ func crawlIO() error {
 	refStatusLine(fmt.Sprintf("[Elapsed:%fs] | [Obtained:%d] | [%s]", sinceTime(), len(RESULTS.URLs), PROJECT_NAME))
 	return nil
 }
-// outcomeIO gives the Keys from Keys Field and shows the results. 
-// keys could be pre-define(ALL_KEYS) options or a file extension like docx.
+/* outcomeIO gives the Keys from Keys Field and 
+ shows the results. 
+ keys could be pre-define(ALL_KEYS) options or a 
+ file extension like docx. */
 func outcomeIO() {
 	vrb := VIEWS_OBJ["RESPONSE"]
 	vrb.Clear()
