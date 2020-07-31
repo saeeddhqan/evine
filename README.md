@@ -23,7 +23,7 @@ go get github.com/saeeddhqan/evine
 ```
 ### From GitHub
 ```bash
-git clone github.com/saeeddhqan/evine.git
+git clone https://github.com/saeeddhqan/evine.git
 cd evine
 go build .
 mv evine /usr/local/bin
