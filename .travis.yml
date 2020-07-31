@@ -8,6 +8,9 @@ os:
   - darwin
   - freebsd
   - osx
+env:
+  global:
+  - TRAVIS_GO_VERSION="$(cat .go-version)"
 script:
   - test -z "$(go get -a)"
   - test -z "$(go vet -v ./...)"
