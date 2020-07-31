@@ -39,7 +39,7 @@ Keybinding                              | Description
 ----------------------------------------|---------------------------------------
 <kbd>Enter</kbd>                        | Run crawler (from URL view)
 <kbd>Enter</kbd>                        | Display response (from Keys and Regex views)
-<kbd>Tab</kbd>       					| Next view
+<kbd>Tab</kbd>       					          | Next view
 <kbd>Ctrl+Space</kbd>                   | Run crawler
 <kbd>Ctrl+S</kbd>                       | Save response
 <kbd>Ctrl+Z</kbd>                       | Quit
@@ -64,9 +64,10 @@ It will displays help for the tool:
 | -proxy string | Proxy by scheme://ip:port | evine -proxy http://1.1.1.1:8080 | 
 | -scheme string | Set the scheme for the requests (default "https") | evine -scheme http | 
 | -timeout int | Seconds to wait before timing out (default 10) | evine -timeout 15 | 
-| -keys string | What do you want? write here(email,url,query_urls,all_urls,phone,media,css,script,cdn,comment,dns,network,all, or a file extension) | evine -keys urls,pdf,txt | 
-| -regex string | Search the Regular Expression on the page contents | evine -regex 'User.+' | 
-| -robots | Scrape robots.txt for URLs and using them as seeds | evine -robots | 
+| -keys string | What do you want? write here(email,url,query_urls,all_urls,phone,media,css,script,cdn,comment,dns,network,all, or a file extension) | evine -keys urls,pdf,txt |
+| -regex string | Search the Regular Expression on the page contents | evine -regex 'User.+' |
+| -max-regex int | Max result of regex search for regex field (default 1000) | evine -max-regex -1 | 
+| -robots | Scrape robots.txt for URLs and using them as seeds | evine -robots |
 | -sitemap | Scrape sitemap.xml for URLs and using them as seeds | evine -sitemap |
 
 ### VIEWS
