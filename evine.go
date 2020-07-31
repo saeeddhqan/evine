@@ -1,104 +1,111 @@
 /* Evine, Copyright 2020.
-	This program is free software: you can redistribute it and/or modify
-	it under the terms of the GNU General Public License as published by
-	the Free Software Foundation, either version 3 of the License, or
-	any later version.
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+any later version.
 
-	This program is distributed in the hope that it will be useful,
-	but WITHOUT ANY WARRANTY; without even the implied warranty of
-	MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-	GNU General Public License for more details.
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
 
-	You should have received a copy of the GNU General Public License
-	along with this program.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
 package main
 
 import (
-	"fmt"
 	"flag"
-	"os"
-	"strings"
-	"strconv"
+	"fmt"
+	"github.com/jroimartin/gocui"
+	"io/ioutil"
 	"net/http"
 	"net/url"
-	"time"
+	"os"
 	"regexp"
 	"runtime"
-	"io/ioutil"
+	"strconv"
+	"strings"
 	"sync"
-	"github.com/jroimartin/gocui"
+	"time"
 )
+
 // Options structure
 type Options struct {
-	Robots	           bool
-	Sitemap	           bool
-	Thread             int
-	Timeout            int
-	Delay              int
-	Depth              int
-	MaxRegexResult     int
-	URL                string
-	Proxy              string
-	RegexString        string
-	Regex              *regexp.Regexp
-	URLExclude		   string
-	URLExcludeRegex     *regexp.Regexp
-	StatusCodeExclude   string
-	StatusCodeRegex	   *regexp.Regexp
-	InScopeExclude      string
-	Scheme 		       string
-	Headers		       string
-	Query    		   string
-	Keys 			   []string
-	InScopeDomains	   []string
+	Robots            bool
+	Sitemap           bool
+	Thread            int
+	Timeout           int
+	Delay             int
+	Depth             int
+	MaxRegexResult    int
+	URL               string
+	Proxy             string
+	RegexString       string
+	Regex             *regexp.Regexp
+	URLExclude        string
+	URLExcludeRegex   *regexp.Regexp
+	StatusCodeExclude string
+	StatusCodeRegex   *regexp.Regexp
+	InScopeExclude    string
+	Scheme            string
+	Headers           string
+	Query             string
+	Keys              []string
+	InScopeDomains    []string
 }
 
+// Output result structure
 type Results struct {
-	Pages 			string
-	PageByURL		map[string]string
-	URLs 			map[string]bool
-	OutScopeURLs    map[string]bool
-	QueryURLs		map[string]bool
-	CSS				map[string]bool
-	Scripts			map[string]bool
-	CDNs 			map[string]bool
-	Medias			map[string]bool
-	Emails			map[string]bool
-	Phones			map[string]bool
-	Networks		map[string]bool
-	Comments		map[string]bool
-	HostNames		[]string
-	RegMaches       map[string][]string
+	Pages        string
+	PageByURL    map[string]string
+	URLs         map[string]bool
+	OutScopeURLs map[string]bool
+	QueryURLs    map[string]bool
+	CSS          map[string]bool
+	Scripts      map[string]bool
+	CDNs         map[string]bool
+	Medias       map[string]bool
+	Emails       map[string]bool
+	Phones       map[string]bool
+	Networks     map[string]bool
+	Comments     map[string]bool
+	HostNames    []string
+	RegMaches    map[string][]string
 }
+
 // Program definitions
 type def struct {
-	currentPage 	    string
-	currentPageIndex	int
-	Gui		            *gocui.Gui
+	currentPage      string
+	currentPageIndex int
+	Gui              *gocui.Gui
 }
+
 // CUI View Attributes
-type viewAttrs struct{
-	editor      gocui.Editor
-	editable    bool
-	frame       bool
-	text        string
-	title       string
-	wrap        bool
-	x0		    func(int) int
-	y0		    func(int) int
-	x1 		    func(int) int
-	y1 		    func(int) int
+type viewAttrs struct {
+	editor   gocui.Editor
+	editable bool
+	frame    bool
+	text     string
+	title    string
+	wrap     bool
+	x0       func(int) int
+	y0       func(int) int
+	x1       func(int) int
+	y1       func(int) int
 }
+
 // Search prompt editor struct type
 type searchEditor struct {
 	editor gocui.Editor
 }
+
 // URL editor struct type
 type singleLineEditor struct {
 	editor gocui.Editor
 }
+
 // RESPONSE editor struct type
 type responseEditor struct {
 	editor gocui.Editor
@@ -109,62 +116,67 @@ var (
 	OPTIONS = &Options{}
 	// To identify media postfixes
 	MEDIA_POSTFIX = []string{"aa", "aac", "aif", "aiff", "amr", "amv", "amz", "ape", "asc", "asf", "au", "bash", "bat", "bmp", "c",
-				"cfa", "chm", "cpp", "cs", "csv", "doc", "docx", "dmg", "f4a", "f4b", "f4p", "f4v", "flac", "flv", "gif", "gif", "gifv",
-				"go", "gz", "ico", "java", "jfif", "jpeg", "jpg", "m2v", "m4a", "m4p", "m4v", "md", "mkv", "mng", "mov",
-				"mp2", "mp3", "mp4", "mpeg", "mpg", "mpv", "msi", "pdf", "pl", "png", "ppt", "pptx", "py", "rar", "rm", "roq",
-				"svg", "svi", "tar.gz", "tiff", "vmo", "vob", "w64", "wav", "webm", "wma", "wmv", "woff2", "wrk",
-				"wvavi", "xlsx", "xz", "yaml", "yml", "zip", "7z", "tgz", "exe", "psd"}
+		"cfa", "chm", "cpp", "cs", "csv", "doc", "docx", "dmg", "f4a", "f4b", "f4p", "f4v", "flac", "flv", "gif", "gif", "gifv",
+		"go", "gz", "ico", "java", "jfif", "jpeg", "jpg", "m2v", "m4a", "m4p", "m4v", "md", "mkv", "mng", "mov",
+		"mp2", "mp3", "mp4", "mpeg", "mpg", "mpv", "msi", "pdf", "pl", "png", "ppt", "pptx", "py", "rar", "rm", "roq",
+		"svg", "svi", "tar.gz", "tiff", "vmo", "vob", "w64", "wav", "webm", "wma", "wmv", "woff2", "wrk",
+		"wvavi", "xlsx", "xz", "yaml", "yml", "zip", "7z", "tgz", "exe", "psd"}
 	// Scheme://hostname.tld
 	BASEURL = ""
 	// Project Name: Hostname.tld
 	PROJECT_NAME = ""
-	VIEWS = []string{"URL", "OPTIONS", "HEADERS", "KEYS", "REGEX", "RESPONSE", "SEARCH_PROMPT"}
-	ALL_VIEWS = []string{"URL", "OPTIONS", "HEADERS", "KEYS", "REGEX", "RESPONSE", "SEARCH", "STATUS_LINE", "SEARCH_PROMPT"}
+	VIEWS        = []string{"URL", "OPTIONS", "HEADERS", "KEYS", "REGEX", "RESPONSE", "SEARCH_PROMPT"}
+	ALL_VIEWS    = []string{"URL", "OPTIONS", "HEADERS", "KEYS", "REGEX", "RESPONSE", "SEARCH", "STATUS_LINE", "SEARCH_PROMPT"}
 	// Pre-define keys
-	ALL_KEYS = []string{"email", "url", "query_urls", "all_urls", "phone", "media", "css", "script", "cdn", "comment", "dns", "network", "all"}
-	MIN_X, MIN_Y = 60, 20
-	VIEWS_OBJ map[string]*gocui.View
+	ALL_KEYS    = []string{"email", "url", "query_urls", "all_urls", "phone", "media", "css", "script", "cdn", "comment", "dns", "network", "all"}
+	MIN_X       = 60
+	MIN_Y       = 20
+	VIEWS_OBJ   map[string]*gocui.View
 	VIEWS_ATTRS = map[string]viewAttrs{}
-	PROG def
-	DEPTH = 1
-	TOKENS chan struct{}
-	RESULTS *Results
-	START_TIME time.Time
-	MUTEX = &sync.Mutex{}
+	PROG        def
+	DEPTH       = 1
+	TOKENS      chan struct{}
+	RESULTS     *Results
+	START_TIME  time.Time
+	MUTEX       = &sync.Mutex{}
 )
+
 // Find comments with regex
 func findComments() {
 	reg := regexp.MustCompile(`<!--.*?-->`)
-	for _,v := range reg.FindAllString(RESULTS.Pages, -1) {
+	for _, v := range reg.FindAllString(RESULTS.Pages, -1) {
 		if !RESULTS.Comments[v] {
 			RESULTS.Comments[v] = true
 		}
 	}
 }
+
 // Find emails with regex
 func findEmails() {
 	reg := regexp.MustCompile(`[A-z0-9.\-_]+@[A-z0-9\-\.]{0,255}?` + PROJECT_NAME + `(?:[A-z]+)?`)
 	founds := reg.FindAllString(RESULTS.Pages, -1)
 	reg = regexp.MustCompile(`[A-z0-9.\-_]+@[A-z0-9\-\.]{3,255}`)
-	for _,v := range reg.FindAllString(RESULTS.Pages, -1) {
+	for _, v := range reg.FindAllString(RESULTS.Pages, -1) {
 		if strings.Contains(strings.Split(v, "@")[1], ".") {
 			founds = append(founds, strings.ToLower(v))
 		}
 	}
-	for _,v := range founds {
+	for _, v := range founds {
 		v = strings.ToLower(v)
-		if !RESULTS.Emails[v] && toBool(v){
+		if !RESULTS.Emails[v] && toBool(v) {
 			RESULTS.Emails[v] = true
 		}
 	}
 }
+
 // Find project DNS names with regex
 func findHostnames() {
 	reg := regexp.MustCompile(`[A-z0-9\.\-%]+\.` + PROJECT_NAME)
-	for _,v := range reg.FindAllString(RESULTS.Pages, -1) {
+	for _, v := range reg.FindAllString(RESULTS.Pages, -1) {
 		uniq(&RESULTS.HostNames, v)
 	}
 }
+
 // Find social networks with regex
 func findNetworks() {
 	netexp := make(map[string]string)
@@ -183,16 +195,17 @@ func findNetworks() {
 	netexp["Tumblr"] = `([A-z0-9\-]{3,32}\.tumblr\.com)`
 	netexp["Blogger"] = `([A-z0-9\-]{3,50}\.blogspot\.com)`
 
-	for _,v := range netexp {
+	for _, v := range netexp {
 		reg := regexp.MustCompile(v)
 		found := reg.FindAllString(RESULTS.Pages, -1)
-		for _,i := range found {
+		for _, i := range found {
 			if !RESULTS.Networks[i] {
 				RESULTS.Networks[i] = true
 			}
 		}
 	}
 }
+
 // Return true if the URL matched with the urlExclude option
 func urlExcluding(uri string) bool {
 	if OPTIONS.URLExcludeRegex.MatchString(uri) {
@@ -200,6 +213,7 @@ func urlExcluding(uri string) bool {
 	}
 	return false
 }
+
 // Return true if the status code matched with the codeExclude option
 func statusCodeExcluding(code int) bool {
 	reg := regexp.MustCompile(OPTIONS.StatusCodeExclude)
@@ -208,55 +222,57 @@ func statusCodeExcluding(code int) bool {
 	}
 	return false
 }
+
 // Send the request and gives the source, status code and errors
 func request(uri string) (string, int, error) {
 	client := &http.Client{
-		Timeout: time.Duration(OPTIONS.Timeout)*time.Second}
+		Timeout: time.Duration(OPTIONS.Timeout) * time.Second}
 	if OPTIONS.Proxy != "" {
 		proxy, er := url.Parse(OPTIONS.Proxy)
 		if er != nil {
 			return "", 0, er
 		}
-		proxy_transport := &http.Transport{
+		proxyTransport := &http.Transport{
 			Proxy: http.ProxyURL(proxy),
 		}
-		client.Transport = proxy_transport
+		client.Transport = proxyTransport
 	}
 	req, er := http.NewRequest("GET", trim(uri), nil)
 	if er != nil {
 		return "", 0, er
 	}
 	headers := strings.Split(trim(VIEWS_OBJ["HEADERS"].Buffer()), "\n")
-	for _,v := range headers{
+	for _, v := range headers {
 		kv := strings.Split(v, ": ")
 		kv[0] = strings.Replace(kv[0], " ", "", -1)
 		req.Header.Set(kv[0], kv[1])
 	}
 	resp, er := client.Do(req)
-	if er != nil{
+	if er != nil {
 		return "", 0, er
 	}
 	defer resp.Body.Close()
 	Body, er := ioutil.ReadAll(resp.Body)
-	if er != nil{
+	if er != nil {
 		return "", 0, er
 	}
 	return string(Body), resp.StatusCode, er
 }
+
 // Crawling the robots.txt URLs as seed
 func crawlRobots() []string {
 	text, statusCode, ok := request(fmt.Sprintf("%s://%s/robots.txt", OPTIONS.Scheme, PROJECT_NAME))
-	
-	if ok != nil{
+
+	if ok != nil {
 		return []string{}
 	}
-	if statusCode == 200{
+	if statusCode == 200 {
 		var reg *regexp.Regexp
 		makers := []string{}
 		// It find all of URLs without any restrict
-		for _,obj := range [3]string{`Disallow: (.*)?`, `Allow: (.*)?`, `Sitemap: (.*)?`} {
+		for _, obj := range [3]string{`Disallow: (.*)?`, `Allow: (.*)?`, `Sitemap: (.*)?`} {
 			reg = regexp.MustCompile(obj)
-			for _,link := range [][]string(reg.FindAllStringSubmatch(text, -1)){
+			for _, link := range [][]string(reg.FindAllStringSubmatch(text, -1)) {
 				makers = append(makers, string(link[1]))
 			}
 		}
@@ -264,6 +280,7 @@ func crawlRobots() []string {
 	}
 	return []string{}
 }
+
 // Crawling the sitemap.xml URLs as seed
 func crawlSitemap() []string {
 	text, statusCode, ok := request(fmt.Sprintf("%s://%s/sitemap.xml", OPTIONS.Scheme, PROJECT_NAME))
@@ -274,176 +291,179 @@ func crawlSitemap() []string {
 	if statusCode == 200 {
 		founds := reg.FindAllStringSubmatch(text, -1)
 		out := []string{}
-		for _,v := range founds {
+		for _, v := range founds {
 			out = append(out, v[1])
 		}
 		return out
 	}
 	return []string{}
 }
+
 // Find social networks with regex
-func checkPostfix(file string, uri string) (bool) {
+func checkPostfix(file string, uri string) bool {
 	reg := regexp.MustCompile(`\.` + file + `[^\w]`)
 	reg2 := regexp.MustCompile(`\.` + file + `[^\w]?$`)
 
-	if reg.MatchString(uri) || reg2.MatchString(uri) || strings.HasSuffix(uri, "."+file){
+	if reg.MatchString(uri) || reg2.MatchString(uri) || strings.HasSuffix(uri, "."+file) {
 		return true
 	}
 	return false
 }
+
 // Set view properties
 func settingViews() {
 	VIEWS_ATTRS = map[string]viewAttrs{
 		"URL": {
-			editor: 	&singleLineEditor{gocui.DefaultEditor},
-			editable: 	true,
-			frame: 		true,
-			text: 		OPTIONS.URL,
-			title: 		"URL",
-			wrap: 		false,
-			x0:   		func(x int)(int){return x-x},
-			y0:   		func(y int)(int){return 0},
-			x1:   		func(x int)(int){return x-1},
-			y1:   		func(y int)(int){return 2},
+			editor:   &singleLineEditor{gocui.DefaultEditor},
+			editable: true,
+			frame:    true,
+			text:     OPTIONS.URL,
+			title:    "URL",
+			wrap:     false,
+			x0:       func(x int) int { return x - x },
+			y0:       func(y int) int { return 0 },
+			x1:       func(x int) int { return x - 1 },
+			y1:       func(y int) int { return 2 },
 		},
 		"OPTIONS": {
-			editor: 	gocui.DefaultEditor,
-			editable: 	true,
-			frame: 		true,
-			text:		optionsCode(),
-			title: 		"Options",
-			wrap: 		true,
-			x0:   		func(x int)(int){return 0},
-			y0:   		func(y int)(int){return 2},
-			x1:   		func(x int)(int){return x/2},
-			y1:   		func(y int)(int){return (y/2)/2},
+			editor:   gocui.DefaultEditor,
+			editable: true,
+			frame:    true,
+			text:     optionsCode(),
+			title:    "Options",
+			wrap:     true,
+			x0:       func(x int) int { return 0 },
+			y0:       func(y int) int { return 2 },
+			x1:       func(x int) int { return x / 2 },
+			y1:       func(y int) int { return (y / 2) / 2 },
 		},
 		"HEADERS": {
-			editor: 	gocui.DefaultEditor,
-			editable: 	true,
-			frame: 		true,
-			text: 		OPTIONS.Headers,
-			title: 		"HTTP Headers",
-			wrap: 		true,
-			x0:   		func(x int)(int){return x/2},
-			y0:   		func(y int)(int){return (y-y)+2},
-			x1:   		func(x int)(int){return x-1},
-			y1:   		func(y int)(int){return (y/2)/2},
+			editor:   gocui.DefaultEditor,
+			editable: true,
+			frame:    true,
+			text:     OPTIONS.Headers,
+			title:    "HTTP Headers",
+			wrap:     true,
+			x0:       func(x int) int { return x / 2 },
+			y0:       func(y int) int { return (y - y) + 2 },
+			x1:       func(x int) int { return x - 1 },
+			y1:       func(y int) int { return (y / 2) / 2 },
 		},
 		"KEYS": {
-			editor: 	&singleLineEditor{gocui.DefaultEditor},
-			editable: 	true,
-			frame: 		true,
-			text: 		OPTIONS.Query,
-			title: 		"Keys",
-			wrap: 		false,
-			x0:   		func(x int)(int){return 0},
-			y0:   		func(y int)(int){return (y/2)/2},
-			x1:   		func(x int)(int){return x/2},
-			y1:   		func(y int)(int){return ((y/2)/2)+2},
+			editor:   &singleLineEditor{gocui.DefaultEditor},
+			editable: true,
+			frame:    true,
+			text:     OPTIONS.Query,
+			title:    "Keys",
+			wrap:     false,
+			x0:       func(x int) int { return 0 },
+			y0:       func(y int) int { return (y / 2) / 2 },
+			x1:       func(x int) int { return x / 2 },
+			y1:       func(y int) int { return ((y / 2) / 2) + 2 },
 		},
 		"REGEX": {
-			editor: 	&singleLineEditor{gocui.DefaultEditor},
-			editable: 	true,
-			frame: 		true,
-			text: 		OPTIONS.RegexString,
-			title: 		"Regex",
-			wrap: 		false,
-			x0:   		func(x int)(int){return x/2},
-			y0:   		func(y int)(int){return (y/2)/2},
-			x1:   		func(x int)(int){return x-1},
-			y1:   		func(y int)(int){return ((y/2)/2)+2},
+			editor:   &singleLineEditor{gocui.DefaultEditor},
+			editable: true,
+			frame:    true,
+			text:     OPTIONS.RegexString,
+			title:    "Regex",
+			wrap:     false,
+			x0:       func(x int) int { return x / 2 },
+			y0:       func(y int) int { return (y / 2) / 2 },
+			x1:       func(x int) int { return x - 1 },
+			y1:       func(y int) int { return ((y / 2) / 2) + 2 },
 		},
 		"RESPONSE": {
-			editor: 	&responseEditor{gocui.DefaultEditor},
-			editable: 	true,
-			frame: 		true,
-			title: 		"Response",
-			wrap: 		true,
-			x0:   		func(x int)(int){return 0},
-			y0:   		func(y int)(int){return (y/2)/2+2},
-			x1:   		func(x int)(int){return x-1},
-			y1:   		func(y int)(int){return y-4},
+			editor:   &responseEditor{gocui.DefaultEditor},
+			editable: true,
+			frame:    true,
+			title:    "Response",
+			wrap:     true,
+			x0:       func(x int) int { return 0 },
+			y0:       func(y int) int { return (y/2)/2 + 2 },
+			x1:       func(x int) int { return x - 1 },
+			y1:       func(y int) int { return y - 4 },
 		},
 		"STATUS_LINE": {
-			editor: 	nil,
-			editable: 	false,
-			frame: 		true,
-			wrap: 		true,
-			x0:   		func(x int)(int){return 0},
-			y0:   		func(y int)(int){return y-4},
-			x1:   		func(x int)(int){return x-1},
-			y1:   		func(y int)(int){return y-2},
+			editor:   nil,
+			editable: false,
+			frame:    true,
+			wrap:     true,
+			x0:       func(x int) int { return 0 },
+			y0:       func(y int) int { return y - 4 },
+			x1:       func(x int) int { return x - 1 },
+			y1:       func(y int) int { return y - 2 },
 		},
 		"SEARCH": {
-			editor: 	nil,
-			editable: 	false,
-			text:		"search>",
-			frame: 		false,
-			wrap: 		false,
-			x0:   		func(x int)(int){return 0},
-			y0:   		func(y int)(int){return y-2},
-			x1:   		func(x int)(int){return 8},
-			y1:   		func(y int)(int){return y},
+			editor:   nil,
+			editable: false,
+			text:     "search>",
+			frame:    false,
+			wrap:     false,
+			x0:       func(x int) int { return 0 },
+			y0:       func(y int) int { return y - 2 },
+			x1:       func(x int) int { return 8 },
+			y1:       func(y int) int { return y },
 		},
 		"SEARCH_PROMPT": {
-			editor: 	&singleLineEditor{&searchEditor{gocui.DefaultEditor}},
-			editable: 	true,
-			frame: 		false,
-			wrap: 		false,
-			x0:   		func(x int)(int){return 8},
-			y0:   		func(y int)(int){return y-2},
-			x1:   		func(x int)(int){return x-1},
-			y1:   		func(y int)(int){return y},
+			editor:   &singleLineEditor{&searchEditor{gocui.DefaultEditor}},
+			editable: true,
+			frame:    false,
+			wrap:     false,
+			x0:       func(x int) int { return 8 },
+			y0:       func(y int) int { return y - 2 },
+			x1:       func(x int) int { return x - 1 },
+			y1:       func(y int) int { return y },
 		},
 		"ERROR": {
-			editor: 	nil,
-			editable: 	false,
-			text:		"Terminal is too small",
-			title:		"Error",
-			frame:		true,
-			wrap: 		false,
-			x0:   		func(x int)(int){return 0},
-			y0:   		func(y int)(int){return 0},
-			x1:   		func(x int)(int){return x-1},
-			y1:   		func(y int)(int){return y-1},
+			editor:   nil,
+			editable: false,
+			text:     "Terminal is too small",
+			title:    "Error",
+			frame:    true,
+			wrap:     false,
+			x0:       func(x int) int { return 0 },
+			y0:       func(y int) int { return 0 },
+			x1:       func(x int) int { return x - 1 },
+			y1:       func(y int) int { return y - 1 },
 		},
 		"SAVE": {
-			editor: 	&singleLineEditor{gocui.DefaultEditor},
-			editable: 	true,
-			text:		"Terminal is too small",
-			title:		"Filename (Enter to submit, Ctrl+q to close)",
-			frame:		true,
-			wrap: 		false,
-			x0:   		func(x int)(int){return (x/2)/2},
-			y0:   		func(y int)(int){return y/2-1},
-			x1:   		func(x int)(int){return x-((x/2)/2)},
-			y1:   		func(y int)(int){return y/2+1},
+			editor:   &singleLineEditor{gocui.DefaultEditor},
+			editable: true,
+			text:     "Terminal is too small",
+			title:    "Filename (Enter to submit, Ctrl+q to close)",
+			frame:    true,
+			wrap:     false,
+			x0:       func(x int) int { return (x / 2) / 2 },
+			y0:       func(y int) int { return y/2 - 1 },
+			x1:       func(x int) int { return x - ((x / 2) / 2) },
+			y1:       func(y int) int { return y/2 + 1 },
 		},
 		"SAVE_RESULT": {
-			editor: 	nil,
-			editable: 	false,
-			title:		"Result save(Ctrl+q to close)",
-			frame:		true,
-			wrap: 		false,
-			x0:   		func(x int)(int){return (x/2)/2},
-			y0:   		func(y int)(int){return (y/2)+1},
-			x1:   		func(x int)(int){return x-((x/2)/2)},
-			y1:   		func(y int)(int){return (y/2)+3},
+			editor:   nil,
+			editable: false,
+			title:    "Result save(Ctrl+q to close)",
+			frame:    true,
+			wrap:     false,
+			x0:       func(x int) int { return (x / 2) / 2 },
+			y0:       func(y int) int { return (y / 2) + 1 },
+			x1:       func(x int) int { return x - ((x / 2) / 2) },
+			y1:       func(y int) int { return (y / 2) + 3 },
 		},
 		"LOADER": {
-			editor: 	nil,
-			editable: 	false,
-			text:		"Loading...",
-			frame:		true,
-			wrap: 		false,
-			x0:   		func(x int)(int){return (x/2)-5},
-			y0:   		func(y int)(int){return (y/2)+1},
-			x1:   		func(x int)(int){return ((x/2)+6)},
-			y1:   		func(y int)(int){return (y/2)+3},
+			editor:   nil,
+			editable: false,
+			text:     "Loading...",
+			frame:    true,
+			wrap:     false,
+			x0:       func(x int) int { return (x / 2) - 5 },
+			y0:       func(y int) int { return (y / 2) + 1 },
+			x1:       func(x int) int { return ((x / 2) + 6) },
+			y1:       func(y int) int { return (y / 2) + 3 },
 		},
 	}
 }
+
 // Put the msg to the Response View concurrently
 func putting(v *gocui.View, msg string) {
 	PROG.Gui.Update(func(_ *gocui.Gui) error {
@@ -451,22 +471,26 @@ func putting(v *gocui.View, msg string) {
 		return nil
 	})
 }
+
 // Push msg to the Response View
 func pushing(msg string) {
 	fmt.Fprintln(VIEWS_OBJ["RESPONSE"], msg)
 }
+
 // Return the difference of the start time to now
 func sinceTime() float64 {
 	return time.Since(START_TIME).Seconds()
 }
+
 // Refresh the status line with new value
 func refStatusLine(msg string) {
 	VIEWS_OBJ["STATUS_LINE"].Clear()
 	putting(VIEWS_OBJ["STATUS_LINE"], msg)
 }
+
 // Show the loading pop-up view
 func loading() error {
-	X,Y := PROG.Gui.Size()
+	X, Y := PROG.Gui.Size()
 	attrs := VIEWS_ATTRS["LOADER"]
 	if v, err := PROG.Gui.SetView("LOADER", attrs.x0(X), attrs.y0(Y), attrs.x1(X), attrs.y1(Y)); err != nil {
 		if err != gocui.ErrUnknownView {
@@ -476,6 +500,7 @@ func loading() error {
 	}
 	return nil
 }
+
 // parseOptions parses the command line flags provided by a user
 func parseOptions() {
 	flag.StringVar(&OPTIONS.URL, "url", "", "URL to crawl for")
@@ -495,7 +520,7 @@ func parseOptions() {
 	flag.StringVar(&OPTIONS.StatusCodeExclude, "code-exclude", ".*", "Exclude HTTP status code with these codes. Separate whit '|'")
 	flag.StringVar(&OPTIONS.InScopeExclude, "domain-exclude", "", "Exclude in-scope domains to crawl. Separate with comma | default=root domain")
 	flag.Parse()
-	if OPTIONS.URL != ""{
+	if OPTIONS.URL != "" {
 		OPTIONS.URL = urlSanitize(OPTIONS.URL)
 	} else {
 		OPTIONS.URL = "https://"
@@ -504,32 +529,34 @@ func parseOptions() {
 		OPTIONS.Headers = `User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:78.0) Gecko/20100101 Firefox/78.0`
 	}
 }
+
 // Return the options to the option view as text
 func optionsCode() string {
-	B2S := func(b bool)(string){
-		if b==true {
+	B2S := func(b bool) string {
+		if b == true {
 			return "true"
 		}
 		return "false"
 	}
 	return fmt.Sprintf("thread,depth,delay,timeout,maxRegexResult=%d,%d,%d,%d,%d\nrobots,sitemap=%s,%s\nurlExclude=%s\ncodeExclude=%s\ndomainExclude=%s\nproxy=%s",
 		OPTIONS.Thread, OPTIONS.Depth, OPTIONS.Delay, OPTIONS.Timeout, OPTIONS.MaxRegexResult,
-		B2S(OPTIONS.Robots), B2S(OPTIONS.Sitemap), OPTIONS.URLExclude, 
+		B2S(OPTIONS.Robots), B2S(OPTIONS.Sitemap), OPTIONS.URLExclude,
 		OPTIONS.StatusCodeExclude, OPTIONS.InScopeExclude, OPTIONS.Proxy)
 }
+
 // Read the options from the option View and set them
 func prepareOptions() string {
-	S2B := func(v string)(bool){
+	S2B := func(v string) bool {
 		if v == "true" {
 			return true
 		}
 		return false
 	}
 	code := trim(VIEWS_OBJ["OPTIONS"].Buffer())
-	if !toBool(code){
+	if !toBool(code) {
 		return "Options are incomplete. Press Ctrl+R to rewrite options."
 	}
-	for k,line := range strings.Split(code, "\n") {
+	for k, line := range strings.Split(code, "\n") {
 		split := strings.Split(line, "=")
 		values := strings.Join(split[1:], "=")
 		splited := strings.Split(values, ",")
@@ -537,30 +564,30 @@ func prepareOptions() string {
 		if len(splited) != len(strings.Split(split[0], ",")) {
 			return "Options are incomplete: All int and bool options must be set. Press Ctrl+R to rewrite options."
 		}
-		switch k{
-			// Set the int variables
-			case 0:
-				var k int
-				var v *int
-				for k,v = range []*int{&OPTIONS.Thread,&OPTIONS.Depth,&OPTIONS.Delay,&OPTIONS.Timeout,&OPTIONS.MaxRegexResult} {
-					if i,err := strconv.Atoi(splited[k]);err == nil {
-						*v = i
-					} else {
-						return fmt.Sprintf("Invalid value for type int: %s.", splited[k])
-					}
+		switch k {
+		// Set the int variables
+		case 0:
+			var k int
+			var v *int
+			for k, v = range []*int{&OPTIONS.Thread, &OPTIONS.Depth, &OPTIONS.Delay, &OPTIONS.Timeout, &OPTIONS.MaxRegexResult} {
+				if i, err := strconv.Atoi(splited[k]); err == nil {
+					*v = i
+				} else {
+					return fmt.Sprintf("Invalid value for type int: %s.", splited[k])
 				}
-			// Set the boolean variables
-			case 1:
-				OPTIONS.Robots,OPTIONS.Sitemap = S2B(splited[0]),S2B(splited[1])
-			// Set the urlExclude,.. variables
-			case 2:
-				OPTIONS.URLExclude = values
-			case 3:
-				OPTIONS.StatusCodeExclude = values
-			case 4:
-				OPTIONS.InScopeDomains = strings.Split(values, ",")
-			case 5:
-				OPTIONS.Proxy = values
+			}
+		// Set the boolean variables
+		case 1:
+			OPTIONS.Robots, OPTIONS.Sitemap = S2B(splited[0]), S2B(splited[1])
+		// Set the urlExclude,.. variables
+		case 2:
+			OPTIONS.URLExclude = values
+		case 3:
+			OPTIONS.StatusCodeExclude = values
+		case 4:
+			OPTIONS.InScopeDomains = strings.Split(values, ",")
+		case 5:
+			OPTIONS.Proxy = values
 		}
 	}
 	// Prepare the URLs channel for crawl
@@ -570,15 +597,17 @@ func prepareOptions() string {
 	prepareKeys()
 	return ""
 }
+
 // Split the keys as slice and write to the OPTIONS.Keys
 func prepareKeys() string {
 	OPTIONS.Keys = strings.Split(strings.ToLower(trim(VIEWS_OBJ["KEYS"].Buffer())), ",")
 	return ""
 }
+
 // Return the false if the arg is blank and true if it isn't.
 // Supported types: int, string, bool, []int, []string, []bool
 func toBool(arg interface{}) bool {
-	switch arg.(type){
+	switch arg.(type) {
 	case int:
 		return arg != 0
 	case string:
@@ -589,20 +618,21 @@ func toBool(arg interface{}) bool {
 		return true
 	default:
 		tostr, ok := arg.([]string)
-		if ok{
+		if ok {
 			return toBool(len(tostr))
 		}
 		toint, ok := arg.([]int)
-		if ok{
+		if ok {
 			return toBool(len(toint))
 		}
 		toflag, ok := arg.([]bool)
-		if ok{
+		if ok {
 			return toBool(len(toflag))
 		}
-	}	
+	}
 	return false
 }
+
 // Print the slices
 func slicePrint(head string, s []string) {
 	pushing(head)
@@ -610,6 +640,7 @@ func slicePrint(head string, s []string) {
 		pushing(s[v])
 	}
 }
+
 // Print the maps
 func mapPrint(head string, m map[string]bool) {
 	pushing(head)
@@ -617,15 +648,17 @@ func mapPrint(head string, m map[string]bool) {
 		pushing(fmt.Sprintf("    %s", k))
 	}
 }
+
 // Search a key to the list and return the true if it is
 func sliceSearch(list *[]string, i string) bool {
-	for _,v := range *list{
-		if v == i{
+	for _, v := range *list {
+		if v == i {
 			return true
 		}
 	}
 	return false
 }
+
 // Search the regex on the web pages and show the result on the Response view
 func regexSearch() {
 	PROG.Gui.Update(func(_ *gocui.Gui) error {
@@ -633,12 +666,12 @@ func regexSearch() {
 		vrb := VIEWS_OBJ["RESPONSE"]
 		vrb.Clear()
 		if RESULTS != nil {
-			for k,v := range RESULTS.PageByURL {
+			for k, v := range RESULTS.PageByURL {
 				founds := OPTIONS.Regex.FindAllString(v, OPTIONS.MaxRegexResult)
 				// Print page address and len of results
 				pushing(fmt.Sprintf(" > %s | %d", k, len(founds)))
 				if founds != nil {
-					for _,v := range founds {
+					for _, v := range founds {
 						pushing("     > " + v)
 					}
 				}
@@ -649,15 +682,17 @@ func regexSearch() {
 		return nil
 	})
 }
+
 // Trim the spaces
 func trim(s string) string {
 	return strings.TrimSpace(s)
 }
+
 // If the i is not in the list uniq append i to the slice
 func uniq(list *[]string, i string) {
 	is := true
-	for _,v := range *list{
-		if v == i{
+	for _, v := range *list {
+		if v == i {
 			is = false
 		}
 	}
@@ -665,6 +700,7 @@ func uniq(list *[]string, i string) {
 		*list = append(*list, i)
 	}
 }
+
 // Identify the Out Scope URLs
 func isOutScope(host string) bool {
 	host = strings.ToLower(host)
@@ -675,17 +711,18 @@ func isOutScope(host string) bool {
 	} else {
 		suffix = "." + PROJECT_NAME
 	}
-	if !strings.HasSuffix(strings.Replace(host, "www.", "", 1), suffix) && !sliceSearch(&OPTIONS.InScopeDomains, host){
+	if !strings.HasSuffix(strings.Replace(host, "www.", "", 1), suffix) && !sliceSearch(&OPTIONS.InScopeDomains, host) {
 		return true
 	}
 	return false
 }
+
 // A URL joiner
 func urjoin(baseurl, uri string) string {
 	urlower := strings.ToLower(uri)
 	var pos int
-	for _,v := range [] string{" ", "", "/", "#", "http://", "https://"}{
-		if urlower == v{
+	for _, v := range []string{" ", "", "/", "#", "http://", "https://"} {
+		if urlower == v {
 			return ""
 		}
 	}
@@ -704,29 +741,30 @@ func urjoin(baseurl, uri string) string {
 	if pos > -1 {
 		uri = uri[:pos]
 	}
-	if !strings.HasSuffix(baseurl, "/"){
-		baseurl = baseurl+"/"
+	if !strings.HasSuffix(baseurl, "/") {
+		baseurl = baseurl + "/"
 	}
 	if strings.HasPrefix(uri, "://") {
 		return ""
 	}
 	if strings.HasPrefix(uri, "//") {
-		return baseurl+uri
+		return baseurl + uri
 	}
 	if strings.HasPrefix(uri, "/") {
-		return baseurl+uri[1:]
+		return baseurl + uri[1:]
 	}
 	base, err := url.Parse(baseurl)
 	if err != nil {
 		return ""
 	}
-	final,err := base.Parse(uri)
-	if err != nil{
+	final, err := base.Parse(uri)
+	if err != nil {
 		return ""
 	}
 	return final.String()
 }
-// Remove URL scheme and replace it with default scheme and 
+
+// Remove URL scheme and replace it with default scheme and
 // removes last slash
 func setURLUniq(uri string) string {
 	// Set Scheme
@@ -735,12 +773,13 @@ func setURLUniq(uri string) string {
 	uri = regexp.MustCompile(`/$`).ReplaceAllString(uri, "")
 	return uri
 }
+
 // Setting the URL Scheme
 func urlSanitize(uri string) string {
 	u, err := url.Parse(uri)
 	if err != nil {
 		// ://name.tld/
-		uri = OPTIONS.Scheme+uri;
+		uri = OPTIONS.Scheme + uri
 		u, err = url.Parse(uri)
 		if err != nil {
 			return ""
@@ -752,8 +791,9 @@ func urlSanitize(uri string) string {
 	}
 	return uri
 }
+
 /* Identify the type of URL and sanitize the URLs.
- Then it returns the URLs that can be scrape. */
+Then it returns the URLs that can be scrape. */
 func urlCategory(urls []string) []string {
 	spool := []string{}
 	var join string
@@ -762,7 +802,7 @@ func urlCategory(urls []string) []string {
 	// Then we use Mutex to lock the loop to solve the problem
 	MUTEX.Lock()
 	defer MUTEX.Unlock()
-	for _,link := range urls {
+	for _, link := range urls {
 		// If the URL is nothing or blank
 		if !toBool(link) {
 			continue
@@ -772,12 +812,12 @@ func urlCategory(urls []string) []string {
 			continue
 		}
 		join = urjoin(BASEURL, link)
-		if !toBool(join) && !strings.Contains(join, "://"){
+		if !toBool(join) && !strings.Contains(join, "://") {
 			continue
 		}
 		// Identify the media files
 		broke = 0
-		for _,ext := range MEDIA_POSTFIX {
+		for _, ext := range MEDIA_POSTFIX {
 			if x := checkPostfix(ext, join); x {
 				if !RESULTS.Medias[join] {
 					RESULTS.Medias[join] = true
@@ -786,11 +826,11 @@ func urlCategory(urls []string) []string {
 				break
 			}
 		}
-		if broke==1 {
+		if broke == 1 {
 			continue
 		}
 		// If it is a JavaScript file
-		if checkPostfix("js", join) {	
+		if checkPostfix("js", join) {
 			if !RESULTS.Scripts[join] {
 				RESULTS.Scripts[join] = true
 			}
@@ -804,7 +844,7 @@ func urlCategory(urls []string) []string {
 			continue
 		}
 		urparse, err := url.Parse(join)
-		if err != nil{
+		if err != nil {
 			continue
 		}
 		// If the URL is out from scope
@@ -827,6 +867,7 @@ func urlCategory(urls []string) []string {
 	}
 	return spool
 }
+
 // Clean the comments from the page source
 func removeComments(text string) string {
 	reg := regexp.MustCompile(`<!--([\s\S]*?)-->`)
@@ -835,22 +876,25 @@ func removeComments(text string) string {
 	text = reg2.ReplaceAllString(text, ``)
 	return text
 }
+
 // Identify the Content Delivery Networks
 func addCDN(uri string) bool {
-	if strings.HasPrefix(uri, "//") && strings.Contains(uri, ".") && len(strings.Split(uri, ".")) >= 2{
+	if strings.HasPrefix(uri, "//") && strings.Contains(uri, ".") && len(strings.Split(uri, ".")) >= 2 {
 		RESULTS.CDNs[uri] = true
 		return true
 	}
 	return false
 }
+
 // Identify the Phone numbers
 func addPhone(uri string) bool {
-	if strings.HasPrefix(uri, "tel://"){
+	if strings.HasPrefix(uri, "tel://") {
 		RESULTS.Phones[uri[6:]] = true
 		return true
 	}
 	return false
 }
+
 // Identify the Email from the URL
 func addEmail(uri string) bool {
 	if strings.HasPrefix(uri, "mailto:") {
@@ -863,6 +907,7 @@ func addEmail(uri string) bool {
 	}
 	return false
 }
+
 // Search prompt regex
 func responseSearch() error {
 	vrb := VIEWS_OBJ["RESPONSE"]
@@ -884,10 +929,11 @@ func responseSearch() error {
 	}
 	vrb.Title = fmt.Sprintf("%d results", len(results))
 	for _, v := range results {
-		pushing("> "+v)
+		pushing("> " + v)
 	}
 	return nil
 }
+
 // Show the Saving pop-up view
 func responseSaveView() {
 	currentDir, err := os.Getwd()
@@ -910,6 +956,7 @@ func responseSaveView() {
 		return nil
 	})
 }
+
 // Show the result of saving
 func saveResultView(res string) {
 	if len(res) > 65 {
@@ -929,6 +976,7 @@ func saveResultView(res string) {
 		return nil
 	})
 }
+
 // Setting View Attributes
 func setViewAttrs(v *gocui.View, attrs viewAttrs) *gocui.View {
 	v.Title = attrs.title
@@ -939,6 +987,7 @@ func setViewAttrs(v *gocui.View, attrs viewAttrs) *gocui.View {
 	fmt.Fprintf(v, attrs.text)
 	return v
 }
+
 // Building Views
 func layout(g *gocui.Gui) error {
 	X, Y := g.Size()
@@ -957,7 +1006,7 @@ func layout(g *gocui.Gui) error {
 		return nil
 	}
 	g.DeleteView("ERROR")
-	for _,viewName := range ALL_VIEWS {
+	for _, viewName := range ALL_VIEWS {
 		attrs := VIEWS_ATTRS[viewName]
 		if v, err := g.SetView(viewName, attrs.x0(X), attrs.y0(Y), attrs.x1(X), attrs.y1(Y)); err != nil {
 			if err != gocui.ErrUnknownView {
@@ -985,11 +1034,13 @@ func initKeybindings(g *gocui.Gui) error {
 		}); err != nil {
 		return err
 	}
+
 	// To save the Response value
 	if err := g.SetKeybinding("", gocui.KeyCtrlS, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
 			// Show the save view
 			responseSaveView()
+
 			// Save the result with Enter key
 			if err := g.SetKeybinding("SAVE", gocui.KeyEnter, gocui.ModNone,
 				func(g *gocui.Gui, v *gocui.View) error {
@@ -1004,6 +1055,7 @@ func initKeybindings(g *gocui.Gui) error {
 				}); err != nil {
 				return err
 			}
+
 			// Ctrl+Q to close the save pop-up view
 			if err := g.SetKeybinding("SAVE", gocui.KeyCtrlQ, gocui.ModNone,
 				func(g *gocui.Gui, v *gocui.View) error {
@@ -1019,6 +1071,7 @@ func initKeybindings(g *gocui.Gui) error {
 		}); err != nil {
 		return err
 	}
+
 	// To go to the next view: Tab
 	if err := g.SetKeybinding("", gocui.KeyTab, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
@@ -1028,6 +1081,7 @@ func initKeybindings(g *gocui.Gui) error {
 		}); err != nil {
 		return err
 	}
+
 	// To run the crawler in each view: Ctrl+Space
 	if err := g.SetKeybinding("", gocui.KeyCtrlSpace, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
@@ -1036,6 +1090,7 @@ func initKeybindings(g *gocui.Gui) error {
 		}); err != nil {
 		return err
 	}
+
 	// To select the Search Prompt view
 	if err := g.SetKeybinding("", gocui.KeyCtrlF, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
@@ -1044,6 +1099,7 @@ func initKeybindings(g *gocui.Gui) error {
 		}); err != nil {
 		return err
 	}
+
 	// To run the crawler in the URL view: Enter
 	if err := g.SetKeybinding("URL", gocui.KeyEnter, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
@@ -1052,6 +1108,7 @@ func initKeybindings(g *gocui.Gui) error {
 		}); err != nil {
 		return err
 	}
+
 	// To rewrite the default options from the optionsCode: Ctrl+R
 	if err := g.SetKeybinding("OPTIONS", gocui.KeyCtrlR, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
@@ -1062,6 +1119,7 @@ func initKeybindings(g *gocui.Gui) error {
 		}); err != nil {
 		return err
 	}
+
 	// To rewrite the default headers: Ctrl+R
 	if err := g.SetKeybinding("HEADERS", gocui.KeyCtrlR, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
@@ -1072,6 +1130,7 @@ func initKeybindings(g *gocui.Gui) error {
 		}); err != nil {
 		return err
 	}
+
 	// To search the entered keys and shows the results
 	if err := g.SetKeybinding("KEYS", gocui.KeyEnter, gocui.ModNone,
 		func(_ *gocui.Gui, v *gocui.View) error {
@@ -1087,6 +1146,7 @@ func initKeybindings(g *gocui.Gui) error {
 		}); err != nil {
 		return err
 	}
+
 	// To search the entered regex in the web pages
 	if err := g.SetKeybinding("REGEX", gocui.KeyEnter, gocui.ModNone,
 		func(_ *gocui.Gui, v *gocui.View) error {
@@ -1102,7 +1162,7 @@ func initKeybindings(g *gocui.Gui) error {
 				return nil
 			}
 			OPTIONS.Regex = reg
-			go func(){
+			go func() {
 				regexSearch()
 			}()
 			return nil
@@ -1111,6 +1171,7 @@ func initKeybindings(g *gocui.Gui) error {
 	}
 	return nil
 }
+
 // Save the slice of data in the path
 func output(data []string, path string) error {
 	fopen, err := os.Create(path)
@@ -1118,19 +1179,21 @@ func output(data []string, path string) error {
 	if err != nil {
 		return err
 	}
-	for _,v := range data {
-		fopen.WriteString(v+"\n")
+	for _, v := range data {
+		fopen.WriteString(v + "\n")
 	}
 	return nil
 }
+
 // Search prompt editor. It search the regex by event of keys
 func (e searchEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	e.editor.Edit(v, key, ch, mod)
 	PROG.Gui.Update(func(g *gocui.Gui) error {
 		responseSearch()
-	return nil
+		return nil
 	})
 }
+
 // The singleLineEditor removes multi lines capabilities.
 // the Edit function credited from the Wuzz project
 func (e singleLineEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
@@ -1167,12 +1230,14 @@ func (e singleLineEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.
 	}
 	e.editor.Edit(v, key, ch, mod)
 }
+
 // The singleLineEditor removes multi lines capabilities
 func (e responseEditor) Edit(v *gocui.View, key gocui.Key, ch rune, mod gocui.Modifier) {
 	if key == gocui.KeyArrowUp || key == gocui.KeyArrowDown {
 		e.editor.Edit(v, key, ch, mod)
 	}
 }
+
 // Find all of href|src attribute values as URL. It's not limited just a[href]
 func getURLs(text string) []string {
 	text = removeComments(text)
@@ -1181,17 +1246,18 @@ func getURLs(text string) []string {
 	find := reg.FindAllString(text, -1)
 	links := []string{}
 	repPrefix := regexp.MustCompile(`(href|src)\s*?=\s*`)
-	for _,v := range find {
+	for _, v := range find {
 		if v != "" && !sanitizeTags.MatchString(v) {
 			v = repPrefix.ReplaceAllString(v, ``)
-			links = append(links, strings.ReplaceAll(strings.ReplaceAll(v, "'",""), "\"", ""))
+			links = append(links, strings.ReplaceAll(strings.ReplaceAll(v, "'", ""), "\"", ""))
 		}
 	}
 	return links
 }
+
 // getSource run with each URL and extract links from the URL page
 func getSource(uri string) ([]string, error) {
-	if !urlExcluding(uri){
+	if !urlExcluding(uri) {
 		return []string{}, nil
 	}
 	time.Sleep(time.Duration(OPTIONS.Delay) * time.Millisecond)
@@ -1199,10 +1265,10 @@ func getSource(uri string) ([]string, error) {
 	if er != nil {
 		return []string{}, er
 	}
-	if !statusCodeExcluding(statusCode){
+	if !statusCodeExcluding(statusCode) {
 		return []string{}, nil
 	}
-	putting(VIEWS_OBJ["RESPONSE"], " > " + uri)
+	putting(VIEWS_OBJ["RESPONSE"], " > "+uri)
 	RESULTS.Pages += text
 	RESULTS.PageByURL[uri] = text
 	allURLs := getURLs(text)
@@ -1210,20 +1276,22 @@ func getSource(uri string) ([]string, error) {
 	refStatusLine(fmt.Sprintf("[Elapsed:%fs] | [Obtained:%d] | [%s]", sinceTime(), len(RESULTS.URLs), uri))
 	return allURLs, nil
 }
+
 // Crawling process for each seed
 func crawl(uri string) []string {
 	TOKENS <- struct{}{}
-	list,err := getSource(uri)
+	list, err := getSource(uri)
 	if err != nil {
 		return []string{}
 	}
 	<-TOKENS
-	if DEPTH == OPTIONS.Depth{
+	if DEPTH == OPTIONS.Depth {
 		return []string{}
 	}
 	DEPTH += 1
 	return list
 }
+
 // Run the crawler
 func crawlIO() error {
 	respObj := VIEWS_OBJ["RESPONSE"]
@@ -1238,29 +1306,29 @@ func crawlIO() error {
 	// Show loading pop-up
 	loading()
 	// Prepare the Results
-	RESULTS = &Results{"",map[string]string{},map[string]bool{},
-			   map[string]bool{},map[string]bool{},map[string]bool{},
-			   map[string]bool{},map[string]bool{},map[string]bool{},
-			   map[string]bool{},map[string]bool{},map[string]bool{},
-			   map[string]bool{},[]string{},map[string][]string{}}
+	RESULTS = &Results{"", map[string]string{}, map[string]bool{},
+		map[string]bool{}, map[string]bool{}, map[string]bool{},
+		map[string]bool{}, map[string]bool{}, map[string]bool{},
+		map[string]bool{}, map[string]bool{}, map[string]bool{},
+		map[string]bool{}, []string{}, map[string][]string{}}
 	go func() error {
 		defer PROG.Gui.Update(func(g *gocui.Gui) error {
 			g.DeleteView("LOADER")
 			return nil
 		})
-		urparse,err := url.Parse(trim(VIEWS_OBJ["URL"].Buffer()))
+		urparse, err := url.Parse(trim(VIEWS_OBJ["URL"].Buffer()))
 		if err != nil {
 			pushing(fmt.Sprintf("Invalid URL: %v", err))
 			return nil
 		}
 		// Checking url_exclude option
-		OPTIONS.URLExcludeRegex,err = regexp.Compile(OPTIONS.URLExclude)
+		OPTIONS.URLExcludeRegex, err = regexp.Compile(OPTIONS.URLExclude)
 		if err != nil {
 			pushing(fmt.Sprintf("Invalid url_exclude regex: %v", err))
 			return nil
 		}
 		// Checking url_exclude option
-		OPTIONS.StatusCodeRegex,err = regexp.Compile(OPTIONS.StatusCodeExclude)
+		OPTIONS.StatusCodeRegex, err = regexp.Compile(OPTIONS.StatusCodeExclude)
 		if err != nil {
 			pushing(fmt.Sprintf("Invalid code_exclude regex: %v", err))
 			return nil
@@ -1276,8 +1344,8 @@ func crawlIO() error {
 		seen := make(map[string]bool)
 		seen[urparse.String()] = true
 
-		seeds,err := getSource(urparse.String())
-		if err != nil{
+		seeds, err := getSource(urparse.String())
+		if err != nil {
 			pushing(fmt.Sprintf("Request: %v", err))
 			return nil
 		}
@@ -1299,7 +1367,7 @@ func crawlIO() error {
 			g.DeleteView("LOADER")
 			return nil
 		})
-		go func() {worklist <- seeds}()
+		go func() { worklist <- seeds }()
 		// Crawl the web concurrently
 		for ; n > 0; n-- {
 			list := <-worklist
@@ -1321,63 +1389,65 @@ func crawlIO() error {
 	refStatusLine(fmt.Sprintf("[Elapsed:%fs] | [Obtained:%d] | [%s]", sinceTime(), len(RESULTS.URLs), PROJECT_NAME))
 	return nil
 }
-/* outcomeIO gives the Keys from Keys Field and 
- shows the results. 
- keys could be pre-define(ALL_KEYS) options or a 
- file extension like docx. */
+
+/* outcomeIO gives the Keys from Keys Field and
+shows the results.
+keys could be pre-define(ALL_KEYS) options or a
+file extension like docx. */
 func outcomeIO() {
 	vrb := VIEWS_OBJ["RESPONSE"]
 	vrb.Clear()
 	loading()
 	vrb.SetOrigin(0, 0)
+
 	PROG.Gui.Update(func(_ *gocui.Gui) error {
 		var ext2 bool
-		for _,q := range OPTIONS.Keys {
-			ext2 = q=="all"
+		for _, q := range OPTIONS.Keys {
+			ext2 = q == "all"
 
-			if q=="email" || ext2 {
+			if q == "email" || ext2 {
 				findEmails()
 				mapPrint("[*] Emails", RESULTS.Emails)
 			}
-			if q=="comment" || ext2 {
+			if q == "comment" || ext2 {
 				findComments()
 				mapPrint("[*] Comments", RESULTS.Comments)
 			}
-			if q=="url" || ext2 {
+			if q == "url" || ext2 {
 				mapPrint("[*] In Scope URLs", RESULTS.URLs)
 			}
-			if q=="all_urls" || ext2 {
+			if q == "all_urls" || ext2 {
 				mapPrint("[*] Out Scope Links", RESULTS.OutScopeURLs)
 			}
-			if q=="cdn" || ext2 {
+			if q == "cdn" || ext2 {
 				mapPrint("[*] CDNs", RESULTS.CDNs)
 			}
-			if q=="script" || ext2 {
+			if q == "script" || ext2 {
 				mapPrint("[*] Scripts", RESULTS.Scripts)
 			}
-			if q=="css" || ext2 {
+			if q == "css" || ext2 {
 				mapPrint("[*] CSS", RESULTS.CSS)
 			}
-			if q=="media" || ext2 {
+			if q == "media" || ext2 {
 				mapPrint("[*] Media", RESULTS.Medias)
 			}
-			if q=="dns" || ext2 {
+			if q == "dns" || ext2 {
 				findHostnames()
 				slicePrint("[*] HostNames", RESULTS.HostNames)
 			}
-			if q=="network" || ext2 {
+			if q == "network" || ext2 {
 				findNetworks()
 				mapPrint("[*] Social Networks", RESULTS.Networks)
 			}
-			if q=="query_urls" || ext2 {
+			if q == "query_urls" || ext2 {
 				mapPrint("[*] Get URLs", RESULTS.QueryURLs)
 			}
-			if q=="phones" || ext2 {
+			if q == "phones" || ext2 {
 				mapPrint("[*] Phones", RESULTS.Phones)
 			}
 			if !sliceSearch(&ALL_KEYS, q) {
 				pushing("[*] '." + q + "'")
-				for k := range RESULTS.Medias{
+				for k := range RESULTS.Medias {
 					if checkPostfix(q, k) {
 						pushing(k)
 					}
@@ -1389,6 +1459,7 @@ func outcomeIO() {
 		return nil
 	})
 }
+
 // The main function
 func main() {
 	parseOptions()
