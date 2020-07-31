@@ -1,5 +1,6 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/saeeddhqan/evine)](https://goreportcard.com/report/github.com/saeeddhqan/evine)
 [![License](https://img.shields.io/badge/License-GPLv3-green.svg)](https://opensource.org/licenses/GPL-3.0)
+[![Build Status](https://travis-ci.com/saeeddhqan/evine.svg?branch=master)](https://travis-ci.com/saeeddhqan/evine)
 # Evine
 
 Interactive CLI Web Crawler.
@@ -30,11 +31,9 @@ mv evine /usr/local/bin
 evine --help
 ```
 
-Note: golang >= 1.10 required.
+Note: golang 1.13.x required.
 
-[Binary releases](https://github.com/saeeddhqan/evine/releases) are also available.
-
-### Commands
+## Commands & Usage
 
 Keybinding                              | Description
 ----------------------------------------|---------------------------------------
@@ -69,6 +68,16 @@ It will displays help for the tool:
 | -regex string | Search the Regular Expression on the page contents | evine -regex 'User.+' | 
 | -robots | Scrape robots.txt for URLs and using them as seeds | evine -robots | 
 | -sitemap | Scrape sitemap.xml for URLs and using them as seeds | evine -sitemap |
+
+### VIEWS
+- URL: In this view, you should enter the URL string.
+- Options: This view is for setting options.
+- Headers: This view is for setting the HTTP Headers.
+- Keys: This view is used after the crawling web. 
+  It will be used to extract the data(docs, URLs, etc) from the web pages that have been crawled.
+- Regex: This view is useful to search the Regexes in web pages that have been crawled. Write your Regex in this view and press Enter.
+- Response: All of the results write in this view
+- Search: This view is used to search the Regexes in the Response content.
 
 ## TODO
 
