@@ -4,15 +4,12 @@ go:
   - master
 os:
   - linux
-  - windows
   - darwin
   - freebsd
   - osx
-env:
-  global:
-  - TRAVIS_GO_VERSION="$(cat .go-version)"
 script:
   - test -z "$(go get -a)"
+  - test -z "$(gofmt -l ./)"
   - test -z "$(go vet -v ./...)"
   - go test ./...
   - go build
