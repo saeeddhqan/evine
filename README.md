@@ -5,8 +5,8 @@
 
 Interactive CLI Web Crawler.
 
-Evine is a simple, fast, and interactive crawler and web scraper written in Golang and based on the gocui framework.
-Evine can be used for a wide range of purposes such as metadata extraction, data mining and data collection.
+evine is a simple, fast, and interactive web crawler and web scraper written in Golang.
+evine is useful for a wide range of purposes such as metadata extraction, data mining, and enumerating.
 
 ![evine screenshot](doc/screen.png)
 
@@ -88,4 +88,4 @@ It will displays help for the tool:
 
 Bugs or suggestions? Create an [issue](https://github.com/saeeddhqan/evine/issues).
 
-evine is heavily inspired by [wuzz](https://github.com/asciimoo/wuzz)
+evine is heavily inspired by [wuzz](https://github.com/asciimoo/wuzz).
