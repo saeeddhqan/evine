@@ -507,7 +507,7 @@ func parseOptions() {
 	flag.IntVar(&OPTIONS.Thread, "thread", 5, "The number of concurrent goroutines for resolving")
 	flag.IntVar(&OPTIONS.Delay, "delay", 0, "Sleep between each request(Millisecond)")
 	flag.IntVar(&OPTIONS.Timeout, "timeout", 10, "Seconds to wait before timing out")
-	flag.IntVar(&OPTIONS.MaxRegexResult, "max-regex", 1000, "max result of regex search for regex field")
+	flag.IntVar(&OPTIONS.MaxRegexResult, "max-regex", 1000, "Max result of regex search for regex field")
 	flag.BoolVar(&OPTIONS.Robots, "robots", false, "Scrape robots.txt for URLs and using them as seeds")
 	flag.BoolVar(&OPTIONS.Sitemap, "sitemap", false, "Scrape sitemap.xml for URLs and using them as seeds")
 	flag.StringVar(&OPTIONS.Query, "keys", "", `What do you want? write here(email,url,query_urls,all_urls,phone,media,css,script,cdn,comment,dns,network,all, or a file extension)`)
