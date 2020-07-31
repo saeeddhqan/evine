@@ -1,3 +1,5 @@
+[![Go Report Card](https://goreportcard.com/badge/github.com/saeeddhqan/evine)](https://goreportcard.com/report/github.com/saeeddhqan/evine)
+[![License](https://img.shields.io/badge/License-GPLv3-green.svg)](https://opensource.org/licenses/GPL-3.0)
 # Evine
 
 Interactive CLI Web Crawler.
@@ -12,12 +14,23 @@ Follow the project on [Twitter](https://twitter.com/EvineProject).
 
 ## Install
 
+### From Binary
+Pre-build [binary releases](https://github.com/saeeddhqan/evine/releases) are also available.
+### From source
+```bash
+go get github.com/saeeddhqan/evine
+"$GOPATH/bin/evine" -h
 ```
-$ go get github.com/saeeddhqan/evine
-$ "$GOPATH/bin/evine" -h
+### From GitHub
+```bash
+git clone github.com/saeeddhqan/evine.git
+cd evine
+go build .
+mv evine /usr/local/bin
+evine --help
 ```
 
-Note: golang >= 1.14 required.
+Note: golang >= 1.10 required.
 
 [Binary releases](https://github.com/saeeddhqan/evine/releases) are also available.
 
