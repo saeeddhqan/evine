@@ -871,9 +871,7 @@ func urlCategory(urls []string) []string {
 // Clean the comments from the page source
 func removeComments(text string) string {
 	reg := regexp.MustCompile(`<!--([\s\S]*?)-->`)
-	reg2 := regexp.MustCompile(`/\*([\s\S]*?)\`)
 	text = reg.ReplaceAllString(text, ``)
-	text = reg2.ReplaceAllString(text, ``)
 	return text
 }
 
