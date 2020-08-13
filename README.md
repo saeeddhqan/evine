@@ -8,7 +8,6 @@ Interactive CLI Web Crawler.
 Evine is a simple, fast, and interactive web crawler and web scraper written in Golang.
 Evine is useful for a wide range of purposes such as metadata and data extraction, data mining, reconnaissance and testing.
 
-![evine screenshot](doc/screen.png)
 [![asciicast](https://asciinema.org/a/351624.svg)](https://asciinema.org/a/351624)
 
 Follow the project on [Twitter](https://twitter.com/EvineProject).
