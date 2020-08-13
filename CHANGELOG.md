@@ -5,3 +5,4 @@ Initial release
 * Add '-wayback' option
 * Refine regex of emails
 * Detect bad URLs
+* Fix out scope URLs detection

@@ -750,6 +750,7 @@ func uniq(list *[]string, i string) {
 // Identify the Out Scope URLs
 func isOutScope(host string) bool {
 	host = strings.ToLower(host)
+	host = strings.Replace(host, "www.", ".", 1)
 	sh := strings.Split(strings.ToLower(PROJECT_NAME), ".")
 	var suffix string
 	if len(sh) > 1 {
@@ -757,7 +758,7 @@ func isOutScope(host string) bool {
 	} else {
 		suffix = "." + PROJECT_NAME
 	}
-	if !strings.HasSuffix(strings.Replace(host, "www.", "", 1), suffix) && !sliceSearch(&OPTIONS.InScopeDomains, host) {
+	if !strings.HasSuffix(host, suffix) && !sliceSearch(&OPTIONS.InScopeDomains, host) {
 		return true
 	}
 	return false
