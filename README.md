@@ -1,5 +1,5 @@
 [![Go Report Card](https://goreportcard.com/badge/github.com/saeeddhqan/evine)](https://goreportcard.com/report/github.com/saeeddhqan/evine)
-[![License](https://img.shields.io/badge/License-GPLv3-green.svg)](https://opensource.org/licenses/GPL-3.0)
+[![License](https://img.shields.io/github/license/saeeddhqan/evine?color=%234ac41c)](https://opensource.org/licenses/GPL-3.0)
 [![Build Status](https://travis-ci.com/saeeddhqan/evine.svg?branch=master)](https://travis-ci.com/saeeddhqan/evine)
 # Evine
 
@@ -19,12 +19,12 @@ Follow the project on [Twitter](https://twitter.com/EvineProject).
 ### From Binary
 Pre-build [binary releases](https://github.com/saeeddhqan/evine/releases) are also available.
 ### From source
-```bash
+```
 go get github.com/saeeddhqan/evine
 "$GOPATH/bin/evine" -h
 ```
 ### From GitHub
-```bash
+```
 git clone https://github.com/saeeddhqan/evine.git
 cd evine
 go build .
@@ -70,6 +70,7 @@ It will displays help for the tool:
 | -max-regex int | Max result of regex search for regex field (default 1000) | evine -max-regex -1 | 
 | -robots | Scrape robots.txt for URLs and using them as seeds | evine -robots |
 | -sitemap | Scrape sitemap.xml for URLs and using them as seeds | evine -sitemap |
+| -wayback | Scrape WayBackURLs(web.archive.org) for URLs and using them as seeds | evine -sitemap |
 
 ### VIEWS
 - URL: In this view, you should enter the URL string.
@@ -83,11 +84,10 @@ It will displays help for the tool:
 
 ## TODO
 
-* Archive crawler as seeds
 * JSON output
 
 ## Bugs or Suggestions
 
 Bugs or suggestions? Create an [issue](https://github.com/saeeddhqan/evine/issues).
 
-evine is heavily inspired by [wuzz](https://github.com/asciimoo/wuzz).
+Evine is heavily inspired by [wuzz](https://github.com/asciimoo/wuzz).

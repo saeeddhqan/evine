@@ -16,6 +16,7 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"github.com/jroimartin/gocui"
@@ -31,10 +32,15 @@ import (
 	"time"
 )
 
+// Metadata
+var VERSION = "0.1.1"
+var STATUS_LINE_NAME = fmt.Sprintf("[evine/v%s]", VERSION)
+
 // Options structure
 type Options struct {
 	Robots            bool
 	Sitemap           bool
+	WayBack           bool
 	Thread            int
 	Timeout           int
 	Delay             int
@@ -155,7 +161,7 @@ func findComments() {
 func findEmails() {
 	reg := regexp.MustCompile(`[A-z0-9.\-_]+@[A-z0-9\-\.]{0,255}?` + PROJECT_NAME + `(?:[A-z]+)?`)
 	founds := reg.FindAllString(RESULTS.Pages, -1)
-	reg = regexp.MustCompile(`[A-z0-9.\-_]+@[A-z0-9\-\.]{3,255}`)
+	reg = regexp.MustCompile(`[A-z0-9.\-_]+@[A-z0-9\-.]+\.[A-z]{1,10}`)
 	for _, v := range reg.FindAllString(RESULTS.Pages, -1) {
 		if strings.Contains(strings.Split(v, "@")[1], ".") {
 			founds = append(founds, strings.ToLower(v))
@@ -259,6 +265,44 @@ func request(uri string) (string, int, error) {
 	return string(Body), resp.StatusCode, er
 }
 
+// Find the archive pages from the web.archive.org and sanitize
+// the URLs and return a list of URLs
+func crawlWayBackURLs() []string {
+	// Fetch waybackurls need almost 15s timeout
+	timeout := OPTIONS.Timeout
+	OPTIONS.Timeout = 15
+	text, _, ok := request(fmt.Sprintf("%s://web.archive.org/cdx/search/cdx?url=%s/*&output=json&collapse=urlkey", OPTIONS.Scheme, PROJECT_NAME))
+	OPTIONS.Timeout = timeout
+	if ok != nil {
+		return []string{}
+	}
+	var wrapper [][]string
+	ok = json.Unmarshal([]byte(text), &wrapper)
+	if ok != nil {
+		return []string{}
+	}
+	var wayURLs []string
+	var code int
+	for _, urls := range wrapper[1:] {
+		code, _ = strconv.Atoi(urls[4])
+		// Exclude the urls with codeExclude and urlExclude
+		if statusCodeExcluding(code) && urlExcluding(urls[2]) {
+			parse, ok := url.Parse(urls[2])
+			if ok != nil {
+				continue
+			}
+			parse.Host = regexp.MustCompile(`:[\d]+`).ReplaceAllString(parse.Host, "")
+			marshal, ok := parse.MarshalBinary()
+			if ok != nil {
+				continue
+			}
+			url := fmt.Sprintf("%s", marshal)
+			wayURLs = append(wayURLs, strings.ReplaceAll(url, `\/\/`, `//`))
+		}
+	}
+	return wayURLs
+}
+
 // Crawling the robots.txt URLs as seed
 func crawlRobots() []string {
 	text, statusCode, ok := request(fmt.Sprintf("%s://%s/robots.txt", OPTIONS.Scheme, PROJECT_NAME))
@@ -269,7 +313,7 @@ func crawlRobots() []string {
 	if statusCode == 200 {
 		var reg *regexp.Regexp
 		makers := []string{}
-		// It find all of URLs without any restrict
+		// It finds all of URLs without any restrict
 		for _, obj := range [3]string{`Disallow: (.*)?`, `Allow: (.*)?`, `Sitemap: (.*)?`} {
 			reg = regexp.MustCompile(obj)
 			for _, link := range [][]string(reg.FindAllStringSubmatch(text, -1)) {
@@ -389,6 +433,7 @@ func settingViews() {
 			editable: false,
 			frame:    true,
 			wrap:     true,
+			text:     STATUS_LINE_NAME,
 			x0:       func(x int) int { return 0 },
 			y0:       func(y int) int { return y - 4 },
 			x1:       func(x int) int { return x - 1 },
@@ -485,7 +530,7 @@ func sinceTime() float64 {
 // Refresh the status line with new value
 func refStatusLine(msg string) {
 	VIEWS_OBJ["STATUS_LINE"].Clear()
-	putting(VIEWS_OBJ["STATUS_LINE"], msg)
+	putting(VIEWS_OBJ["STATUS_LINE"], STATUS_LINE_NAME+" "+msg)
 }
 
 // Show the loading pop-up view
@@ -510,6 +555,7 @@ func parseOptions() {
 	flag.IntVar(&OPTIONS.MaxRegexResult, "max-regex", 1000, "Max result of regex search for regex field")
 	flag.BoolVar(&OPTIONS.Robots, "robots", false, "Scrape robots.txt for URLs and using them as seeds")
 	flag.BoolVar(&OPTIONS.Sitemap, "sitemap", false, "Scrape sitemap.xml for URLs and using them as seeds")
+	flag.BoolVar(&OPTIONS.WayBack, "wayback", false, "Scrape WayBackURLs(web.archive.org) for URLs and using them as seeds")
 	flag.StringVar(&OPTIONS.Query, "keys", "", `What do you want? write here(email,url,query_urls,all_urls,phone,media,css,script,cdn,comment,dns,network,all, or a file extension)`)
 	flag.StringVar(&OPTIONS.Proxy, "proxy", "", "Proxy by scheme://ip:port")
 	flag.StringVar(&OPTIONS.Headers, "header", "", "HTTP Header for each request(It should to separated fields by \\n). e.g KEY: VALUE\\nKEY1: VALUE1")
@@ -538,9 +584,9 @@ func optionsCode() string {
 		}
 		return "false"
 	}
-	return fmt.Sprintf("thread,depth,delay,timeout,maxRegexResult=%d,%d,%d,%d,%d\nrobots,sitemap=%s,%s\nurlExclude=%s\ncodeExclude=%s\ndomainExclude=%s\nproxy=%s",
+	return fmt.Sprintf("thread,depth,delay,timeout,maxRegexResult=%d,%d,%d,%d,%d\nrobots,sitemap,wayback=%s,%s,%s\nurlExclude=%s\ncodeExclude=%s\ndomainExclude=%s\nproxy=%s",
 		OPTIONS.Thread, OPTIONS.Depth, OPTIONS.Delay, OPTIONS.Timeout, OPTIONS.MaxRegexResult,
-		B2S(OPTIONS.Robots), B2S(OPTIONS.Sitemap), OPTIONS.URLExclude,
+		B2S(OPTIONS.Robots), B2S(OPTIONS.Sitemap), B2S(OPTIONS.WayBack), OPTIONS.URLExclude,
 		OPTIONS.StatusCodeExclude, OPTIONS.InScopeExclude, OPTIONS.Proxy)
 }
 
@@ -578,7 +624,7 @@ func prepareOptions() string {
 			}
 		// Set the boolean variables
 		case 1:
-			OPTIONS.Robots, OPTIONS.Sitemap = S2B(splited[0]), S2B(splited[1])
+			OPTIONS.Robots, OPTIONS.Sitemap, OPTIONS.WayBack = S2B(splited[0]), S2B(splited[1]), S2B(splited[2])
 		// Set the urlExclude,.. variables
 		case 2:
 			OPTIONS.URLExclude = values
@@ -720,6 +766,7 @@ func isOutScope(host string) bool {
 // A URL joiner
 func urjoin(baseurl, uri string) string {
 	urlower := strings.ToLower(uri)
+	baseurl = strings.ReplaceAll(baseurl, `\/\/`, `//`)
 	var pos int
 	for _, v := range []string{" ", "", "/", "#", "http://", "https://"} {
 		if urlower == v {
@@ -812,7 +859,7 @@ func urlCategory(urls []string) []string {
 			continue
 		}
 		join = urjoin(BASEURL, link)
-		if !toBool(join) && !strings.Contains(join, "://") {
+		if !toBool(join) || !strings.Contains(join, "://") || !strings.Contains(join, ".") {
 			continue
 		}
 		// Identify the media files
@@ -932,7 +979,7 @@ func responseSearch() error {
 	return nil
 }
 
-// Show the Saving pop-up view
+// Show the saving pop-up view
 func responseSaveView() {
 	currentDir, err := os.Getwd()
 	if err != nil {
@@ -955,7 +1002,7 @@ func responseSaveView() {
 	})
 }
 
-// Show the result of saving
+// Show the status of output
 func saveResultView(res string) {
 	if len(res) > 65 {
 		res = res[:65] + "..."
@@ -1319,13 +1366,13 @@ func crawlIO() error {
 			pushing(fmt.Sprintf("Invalid URL: %v", err))
 			return nil
 		}
-		// Checking url_exclude option
+		// Checking urlExclude option
 		OPTIONS.URLExcludeRegex, err = regexp.Compile(OPTIONS.URLExclude)
 		if err != nil {
 			pushing(fmt.Sprintf("Invalid url_exclude regex: %v", err))
 			return nil
 		}
-		// Checking url_exclude option
+		// Checking codeExclude option
 		OPTIONS.StatusCodeRegex, err = regexp.Compile(OPTIONS.StatusCodeExclude)
 		if err != nil {
 			pushing(fmt.Sprintf("Invalid code_exclude regex: %v", err))
@@ -1353,6 +1400,9 @@ func crawlIO() error {
 		}
 		if OPTIONS.Sitemap {
 			anseeds = append(anseeds, crawlSitemap()...)
+		}
+		if OPTIONS.WayBack {
+			anseeds = append(anseeds, crawlWayBackURLs()...)
 		}
 		if OPTIONS.Depth > 1 {
 			seeds = append(seeds, urlCategory(anseeds)...)
