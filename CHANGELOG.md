@@ -6,3 +6,5 @@ Initial release
 * Refine regex of emails
 * Detect bad URLs
 * Fix out scope URLs detection
+* Show count of results in the title
+* Fix regex of Social Networks(for speed)
