@@ -185,29 +185,13 @@ func findHostnames() {
 
 // Find social networks with regex
 func findNetworks() {
-	netexp := make(map[string]string)
-	netexp["Instagram"] = `(instagram\.com\/[A-z_0-9.\-]{1,30})`
-	netexp["Facebook"] = `(facebook\.com\/[A-z_0-9\-]{2,50})|(fb\.com\/[A-z_0-9\-]{2,50})`
-	netexp["Twitter"] = `(twitter\.com\/[A-z_0-9\-.]{2,40})`
-	netexp["Github"] = `(github\.com\/[A-z0-9_-]{1,39})`
-	netexp["Github site"] = `([A-z0-9_-]{1,39}\.github.(io|com))`
-	netexp["Telegram"] = `(telegram\.me/[A-z_0-9]{5,32})`
-	netexp["Youtube"] = `(youtube\.com\/user\/[A-z_0-9\-\.]{2,100})`
-	netexp["Linkedin company"] = `(linkedin\.com\/company\/[A-z_0-9\.\-]{3,50})`
-	netexp["Linkedin individual"] = `(linkedin\.com\/in\/[A-z_0-9\.\-]{3,50})`
-	netexp["Googleplus"] = `\.?(plus\.google\.com/[A-z0-9_\-.+]{3,255})`
-	netexp["WordPress"] = `([A-z0-9\-]+\.wordpress\.com)`
-	netexp["Reddit"] = `(reddit\.com/user/[A-z0-9_\-]{3,20})`
-	netexp["Tumblr"] = `([A-z0-9\-]{3,32}\.tumblr\.com)`
-	netexp["Blogger"] = `([A-z0-9\-]{3,50}\.blogspot\.com)`
+	netexp := `(instagram\.com\/[A-z_0-9.\-]{1,30})|(facebook\.com\/[A-z_0-9\-]{2,50})|(fb\.com\/[A-z_0-9\-]{2,50})|(twitter\.com\/[A-z_0-9\-.]{2,40})|(github\.com\/[A-z0-9_-]{1,39})|([A-z0-9_-]{1,39}\.github.(io|com))|(telegram\.me/[A-z_0-9]{5,32})(youtube\.com\/user\/[A-z_0-9\-\.]{2,100})|(linkedin\.com\/company\/[A-z_0-9\.\-]{3,50})|(linkedin\.com\/in\/[A-z_0-9\.\-]{3,50})|(\.?(plus\.google\.com/[A-z0-9_\-.+]{3,255}))|([A-z0-9\-]+\.wordpress\.com)|(reddit\.com/user/[A-z0-9_\-]{3,20})|([A-z0-9\-]{3,32}\.tumblr\.com)|([A-z0-9\-]{3,50}\.blogspot\.com)`
 
-	for _, v := range netexp {
-		reg := regexp.MustCompile(v)
-		found := reg.FindAllString(RESULTS.Pages, -1)
-		for _, i := range found {
-			if !RESULTS.Networks[i] {
-				RESULTS.Networks[i] = true
-			}
+	reg := regexp.MustCompile(netexp)
+	found := reg.FindAllString(RESULTS.Pages, -1)
+	for _, i := range found {
+		if !RESULTS.Networks[i] {
+			RESULTS.Networks[i] = true
 		}
 	}
 }
@@ -943,7 +927,7 @@ func addPhone(uri string) bool {
 
 // Identify the Email from the URL
 func addEmail(uri string) bool {
-	if strings.HasPrefix(uri, "mailto:") {
+	if strings.HasPrefix(uri, "mailto:") && strings.Contains(uri, "@") {
 		uri = strings.ToLower(strings.Replace(uri[7:], "//", "", -1))
 		if strings.Contains(uri, "?") {
 			uri = strings.Split(uri, "?")[0]
@@ -1456,43 +1440,43 @@ func outcomeIO() {
 
 			if q == "email" || ext2 {
 				findEmails()
-				mapPrint("[*] Emails", RESULTS.Emails)
+				mapPrint(fmt.Sprintf("[*] Emails | %d", len(RESULTS.Emails)), RESULTS.Emails)
 			}
 			if q == "comment" || ext2 {
 				findComments()
-				mapPrint("[*] Comments", RESULTS.Comments)
+				mapPrint(fmt.Sprintf("[*] Comments | %d", len(RESULTS.Comments)), RESULTS.Comments)
 			}
 			if q == "url" || ext2 {
-				mapPrint("[*] In Scope URLs", RESULTS.URLs)
+				mapPrint(fmt.Sprintf("[*] In Scope URLs | %d", len(RESULTS.URLs)), RESULTS.URLs)
 			}
 			if q == "all_urls" || ext2 {
-				mapPrint("[*] Out Scope Links", RESULTS.OutScopeURLs)
+				mapPrint(fmt.Sprintf("[*] Out Scope URLs | %d", len(RESULTS.OutScopeURLs)), RESULTS.OutScopeURLs)
 			}
 			if q == "cdn" || ext2 {
-				mapPrint("[*] CDNs", RESULTS.CDNs)
+				mapPrint(fmt.Sprintf("[*] CDNs | %d", len(RESULTS.CDNs)), RESULTS.CDNs)
 			}
 			if q == "script" || ext2 {
-				mapPrint("[*] Scripts", RESULTS.Scripts)
+				mapPrint(fmt.Sprintf("[*] Scripts | %d", len(RESULTS.Scripts)), RESULTS.Scripts)
 			}
 			if q == "css" || ext2 {
-				mapPrint("[*] CSS", RESULTS.CSS)
+				mapPrint(fmt.Sprintf("[*] CSS | %d", len(RESULTS.CSS)), RESULTS.CSS)
 			}
 			if q == "media" || ext2 {
-				mapPrint("[*] Media", RESULTS.Medias)
+				mapPrint(fmt.Sprintf("[*] Media | %d", len(RESULTS.Medias)), RESULTS.Medias)
 			}
 			if q == "dns" || ext2 {
 				findHostnames()
-				slicePrint("[*] HostNames", RESULTS.HostNames)
+				slicePrint(fmt.Sprintf("[*] HostNames | %d", len(RESULTS.HostNames)), RESULTS.HostNames)
 			}
 			if q == "network" || ext2 {
 				findNetworks()
-				mapPrint("[*] Social Networks", RESULTS.Networks)
+				mapPrint(fmt.Sprintf("[*] Social Networks | %d", len(RESULTS.Networks)), RESULTS.Networks)
 			}
 			if q == "query_urls" || ext2 {
-				mapPrint("[*] Get URLs", RESULTS.QueryURLs)
+				mapPrint(fmt.Sprintf("[*] Get URLs | %d", len(RESULTS.QueryURLs)), RESULTS.QueryURLs)
 			}
 			if q == "phones" || ext2 {
-				mapPrint("[*] Phones", RESULTS.Phones)
+				mapPrint(fmt.Sprintf("[*] Phones | %d", len(RESULTS.Phones)), RESULTS.Phones)
 			}
 			if !sliceSearch(&ALL_KEYS, q) {
 				pushing("[*] '." + q + "'")
