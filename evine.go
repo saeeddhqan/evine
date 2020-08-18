@@ -691,8 +691,8 @@ func sliceSearch(list *[]string, i string) bool {
 
 // Search the regex on the web pages and show the result on the Response view
 func regexSearch() {
+	loading()
 	PROG.Gui.Update(func(_ *gocui.Gui) error {
-		loading()
 		vrb := VIEWS_OBJ["RESPONSE"]
 		vrb.Clear()
 		if RESULTS != nil {
@@ -1192,9 +1192,7 @@ func initKeybindings(g *gocui.Gui) error {
 				return nil
 			}
 			OPTIONS.Regex = reg
-			go func() {
-				regexSearch()
-			}()
+			regexSearch()
 			return nil
 		}); err != nil {
 		return err
