@@ -1342,6 +1342,8 @@ func crawlIO() error {
 	go func() error {
 		defer PROG.Gui.Update(func(g *gocui.Gui) error {
 			g.DeleteView("LOADER")
+			// Refresh the status line. the status line shows the elapsed time as second and obtained URLs
+			fmt.Fprintln(VIEWS_OBJ["STATUS_LINE"], fmt.Sprintf("[Elapsed:%fs] | [Obtained:%d] | [Status:Done]", sinceTime(), len(RESULTS.URLs)))
 			return nil
 		})
 		urparse, err := url.Parse(trim(VIEWS_OBJ["URL"].Buffer()))
@@ -1416,8 +1418,6 @@ func crawlIO() error {
 		return nil
 	}()
 	PROG.currentPage = respObj.Buffer()
-	// Refresh the status line. the status line shows the elapsed time as second and obtained URLs
-	refStatusLine(fmt.Sprintf("[Elapsed:%fs] | [Obtained:%d] | [%s]", sinceTime(), len(RESULTS.URLs), PROJECT_NAME))
 	return nil
 }
 
@@ -1477,12 +1477,13 @@ func outcomeIO() {
 				mapPrint(fmt.Sprintf("[*] Phones | %d", len(RESULTS.Phones)), RESULTS.Phones)
 			}
 			if !sliceSearch(&ALL_KEYS, q) {
-				pushing("[*] '." + q + "'")
+				var medias []string
 				for k := range RESULTS.Medias {
 					if checkPostfix(q, k) {
-						pushing(k)
+						medias = append(medias, k)
 					}
 				}
+				slicePrint(fmt.Sprintf("[*] '%s' | %d", q, len(medias)), medias)
 			}
 		}
 		PROG.Gui.DeleteView("LOADER")
