@@ -9,8 +9,3 @@ Initial release
 * Show count of results in the title
 * Fix regex of Social Networks(for speed)
 * Fix regex view loading
-## 0.1.2 2020.08.21
-* Add JQuery element selector to extract nodes
-* Fix status line problems
-* Fix file extension upper and lower case-sensitive problem
-* Rename the keys option and view to the query option
