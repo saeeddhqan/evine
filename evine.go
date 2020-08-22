@@ -19,6 +19,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/PuerkitoBio/goquery"
 	"github.com/jroimartin/gocui"
 	"io/ioutil"
 	"net/http"
@@ -33,7 +34,7 @@ import (
 )
 
 // Metadata
-var VERSION = "0.1.1"
+var VERSION = "0.1.2"
 var STATUS_LINE_NAME = fmt.Sprintf("[evine/v%s]", VERSION)
 
 // Options structure
@@ -131,8 +132,8 @@ var (
 	BASEURL = ""
 	// Project Name: Hostname.tld
 	PROJECT_NAME = ""
-	VIEWS        = []string{"URL", "OPTIONS", "HEADERS", "KEYS", "REGEX", "RESPONSE", "SEARCH_PROMPT"}
-	ALL_VIEWS    = []string{"URL", "OPTIONS", "HEADERS", "KEYS", "REGEX", "RESPONSE", "SEARCH", "STATUS_LINE", "SEARCH_PROMPT"}
+	VIEWS        = []string{"URL", "OPTIONS", "HEADERS", "QUERY", "REGEX", "RESPONSE", "SEARCH_PROMPT"}
+	ALL_VIEWS    = []string{"URL", "OPTIONS", "HEADERS", "QUERY", "REGEX", "RESPONSE", "SEARCH", "STATUS_LINE", "SEARCH_PROMPT"}
 	// Pre-define keys
 	ALL_KEYS    = []string{"email", "url", "query_urls", "all_urls", "phone", "media", "css", "script", "cdn", "comment", "dns", "network", "all"}
 	MIN_X       = 60
@@ -329,6 +330,8 @@ func crawlSitemap() []string {
 
 // Find social networks with regex
 func checkPostfix(file string, uri string) bool {
+	file = strings.ToLower(file)
+	uri = strings.ToLower(uri)
 	reg := regexp.MustCompile(`\.` + file + `[^\w]`)
 	reg2 := regexp.MustCompile(`\.` + file + `[^\w]?$`)
 
@@ -377,12 +380,12 @@ func settingViews() {
 			x1:       func(x int) int { return x - 1 },
 			y1:       func(y int) int { return (y / 2) / 2 },
 		},
-		"KEYS": {
+		"QUERY": {
 			editor:   &singleLineEditor{gocui.DefaultEditor},
 			editable: true,
 			frame:    true,
 			text:     OPTIONS.Query,
-			title:    "Keys",
+			title:    "Query",
 			wrap:     false,
 			x0:       func(x int) int { return 0 },
 			y0:       func(y int) int { return (y / 2) / 2 },
@@ -540,7 +543,7 @@ func parseOptions() {
 	flag.BoolVar(&OPTIONS.Robots, "robots", false, "Scrape robots.txt for URLs and using them as seeds")
 	flag.BoolVar(&OPTIONS.Sitemap, "sitemap", false, "Scrape sitemap.xml for URLs and using them as seeds")
 	flag.BoolVar(&OPTIONS.WayBack, "wayback", false, "Scrape WayBackURLs(web.archive.org) for URLs and using them as seeds")
-	flag.StringVar(&OPTIONS.Query, "keys", "", `What do you want? write here(email,url,query_urls,all_urls,phone,media,css,script,cdn,comment,dns,network,all, or a file extension)`)
+	flag.StringVar(&OPTIONS.Query, "query", "", `Query expression(It could be a file extension(pdf), a key query(url,script,css,..) or a jquery selector($("a[class='hdr']).attr('hdr')")))`)
 	flag.StringVar(&OPTIONS.Proxy, "proxy", "", "Proxy by scheme://ip:port")
 	flag.StringVar(&OPTIONS.Headers, "header", "", "HTTP Header for each request(It should to separated fields by \\n). e.g KEY: VALUE\\nKEY1: VALUE1")
 	flag.StringVar(&OPTIONS.RegexString, "regex", "", "Search the Regular Expression on the pages")
@@ -624,14 +627,18 @@ func prepareOptions() string {
 	TOKENS = make(chan struct{}, OPTIONS.Thread)
 	// Init Headers
 	OPTIONS.Headers = trim(VIEWS_OBJ["HEADERS"].Buffer())
-	prepareKeys()
+	prepareQuery()
 	return ""
 }
 
 // Split the keys as slice and write to the OPTIONS.Keys
-func prepareKeys() string {
-	OPTIONS.Keys = strings.Split(strings.ToLower(trim(VIEWS_OBJ["KEYS"].Buffer())), ",")
-	return ""
+func prepareQuery() {
+	q := trim(VIEWS_OBJ["QUERY"].Buffer())
+	if !strings.HasPrefix(q, "$") {
+		OPTIONS.Keys = strings.Split(q, ",")
+	} else {
+		OPTIONS.Query = q
+	}
 }
 
 // Return the false if the arg is blank and true if it isn't.
@@ -711,6 +718,55 @@ func regexSearch() {
 		PROG.Gui.DeleteView("LOADER")
 		return nil
 	})
+}
+
+// Gives a query($("a").attr("href")) and return the result of query
+func parseQuery(query string) ([]string, string) {
+	query = strings.TrimSpace(query)
+	// Extract the expressions
+	syntaxExp := regexp.MustCompile(`^\$\("([^"]+)"\)\.([\w]+)\(("([^"]+)")?\)`).FindAllStringSubmatch(query, 1)
+	outputResult := []string{}
+	// Check the syntax of query
+	if !toBool(len(syntaxExp)) {
+		return outputResult, "Query: Invalid syntax"
+	}
+	query = strings.ReplaceAll(query, syntaxExp[0][0], "")
+	exprs := syntaxExp[0][1:]
+	// Check the method names
+	methods := []string{"html", "text", "attr"}
+	method := exprs[1]
+	if !sliceSearch(&methods, method) {
+		return outputResult, "Query: Invalid method name"
+	}
+	// Read the document to parse
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(RESULTS.Pages))
+	if err != nil {
+		return outputResult, fmt.Sprintf("%s", err)
+	}
+	var def func(*goquery.Selection) (string, error)
+	switch method {
+	case "text":
+		def = func(obj *goquery.Selection) (string, error) {
+			return obj.Text(), nil
+		}
+	case "html":
+		def = func(obj *goquery.Selection) (string, error) {
+			return obj.Html()
+		}
+	case "attr":
+		def = func(obj *goquery.Selection) (string, error) {
+			attr, _ := obj.Attr(exprs[3])
+			return attr, nil
+		}
+	}
+	// Run the query
+	doc.Find(exprs[0]).Each(func(i int, obj *goquery.Selection) {
+		rsp, err := def(obj)
+		if err == nil {
+			outputResult = append(outputResult, rsp)
+		}
+	})
+	return outputResult, ""
 }
 
 // Trim the spaces
@@ -1065,7 +1121,7 @@ func initKeybindings(g *gocui.Gui) error {
 		return err
 	}
 
-	// To save the Response value
+	// To save the Response value: Ctrl+S
 	if err := g.SetKeybinding("", gocui.KeyCtrlS, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
 			// Show the save view
@@ -1121,7 +1177,7 @@ func initKeybindings(g *gocui.Gui) error {
 		return err
 	}
 
-	// To select the Search Prompt view
+	// To select the Search Prompt view: Ctrl+F
 	if err := g.SetKeybinding("", gocui.KeyCtrlF, gocui.ModNone,
 		func(g *gocui.Gui, v *gocui.View) error {
 			g.SetCurrentView("SEARCH_PROMPT")
@@ -1161,23 +1217,20 @@ func initKeybindings(g *gocui.Gui) error {
 		return err
 	}
 
-	// To search the entered keys and shows the results
-	if err := g.SetKeybinding("KEYS", gocui.KeyEnter, gocui.ModNone,
+	// To search the entered keys and shows the results: Enter
+	if err := g.SetKeybinding("QUERY", gocui.KeyEnter, gocui.ModNone,
 		func(_ *gocui.Gui, v *gocui.View) error {
 			if RESULTS == nil {
 				return nil
 			}
-			if err := prepareKeys(); err != "" {
-				pushing(err)
-				return nil
-			}
+			prepareQuery()
 			outcomeIO()
 			return nil
 		}); err != nil {
 		return err
 	}
 
-	// To search the entered regex in the web pages
+	// To search the entered regex in the web pages: Enter
 	if err := g.SetKeybinding("REGEX", gocui.KeyEnter, gocui.ModNone,
 		func(_ *gocui.Gui, v *gocui.View) error {
 			prepareOptions()
@@ -1434,61 +1487,72 @@ func outcomeIO() {
 	vrb.SetOrigin(0, 0)
 
 	PROG.Gui.Update(func(_ *gocui.Gui) error {
-		var ext2 bool
-		for _, q := range OPTIONS.Keys {
-			ext2 = q == "all"
+		defer PROG.Gui.DeleteView("LOADER")
+		// If it is a JQuery syntax
+		if strings.HasPrefix(OPTIONS.Query, "$") {
+			resp, err := parseQuery(OPTIONS.Query)
+			if err != "" {
+				pushing(err)
+				return nil
+			}
+			slicePrint(fmt.Sprintf("[*] %s | %d", OPTIONS.Query, len(resp)), resp)
+		} else {
 
-			if q == "email" || ext2 {
-				findEmails()
-				mapPrint(fmt.Sprintf("[*] Emails | %d", len(RESULTS.Emails)), RESULTS.Emails)
-			}
-			if q == "comment" || ext2 {
-				findComments()
-				mapPrint(fmt.Sprintf("[*] Comments | %d", len(RESULTS.Comments)), RESULTS.Comments)
-			}
-			if q == "url" || ext2 {
-				mapPrint(fmt.Sprintf("[*] In Scope URLs | %d", len(RESULTS.URLs)), RESULTS.URLs)
-			}
-			if q == "all_urls" || ext2 {
-				mapPrint(fmt.Sprintf("[*] Out Scope URLs | %d", len(RESULTS.OutScopeURLs)), RESULTS.OutScopeURLs)
-			}
-			if q == "cdn" || ext2 {
-				mapPrint(fmt.Sprintf("[*] CDNs | %d", len(RESULTS.CDNs)), RESULTS.CDNs)
-			}
-			if q == "script" || ext2 {
-				mapPrint(fmt.Sprintf("[*] Scripts | %d", len(RESULTS.Scripts)), RESULTS.Scripts)
-			}
-			if q == "css" || ext2 {
-				mapPrint(fmt.Sprintf("[*] CSS | %d", len(RESULTS.CSS)), RESULTS.CSS)
-			}
-			if q == "media" || ext2 {
-				mapPrint(fmt.Sprintf("[*] Media | %d", len(RESULTS.Medias)), RESULTS.Medias)
-			}
-			if q == "dns" || ext2 {
-				findHostnames()
-				slicePrint(fmt.Sprintf("[*] HostNames | %d", len(RESULTS.HostNames)), RESULTS.HostNames)
-			}
-			if q == "network" || ext2 {
-				findNetworks()
-				mapPrint(fmt.Sprintf("[*] Social Networks | %d", len(RESULTS.Networks)), RESULTS.Networks)
-			}
-			if q == "query_urls" || ext2 {
-				mapPrint(fmt.Sprintf("[*] Get URLs | %d", len(RESULTS.QueryURLs)), RESULTS.QueryURLs)
-			}
-			if q == "phones" || ext2 {
-				mapPrint(fmt.Sprintf("[*] Phones | %d", len(RESULTS.Phones)), RESULTS.Phones)
-			}
-			if !sliceSearch(&ALL_KEYS, q) {
-				var medias []string
-				for k := range RESULTS.Medias {
-					if checkPostfix(q, k) {
-						medias = append(medias, k)
-					}
+			var ext2 bool
+			for _, q := range OPTIONS.Keys {
+				ext2 = q == "all"
+
+				if q == "email" || ext2 {
+					findEmails()
+					mapPrint(fmt.Sprintf("[*] Emails | %d", len(RESULTS.Emails)), RESULTS.Emails)
 				}
-				slicePrint(fmt.Sprintf("[*] '%s' | %d", q, len(medias)), medias)
+				if q == "comment" || ext2 {
+					findComments()
+					mapPrint(fmt.Sprintf("[*] Comments | %d", len(RESULTS.Comments)), RESULTS.Comments)
+				}
+				if q == "url" || ext2 {
+					mapPrint(fmt.Sprintf("[*] In Scope URLs | %d", len(RESULTS.URLs)), RESULTS.URLs)
+				}
+				if q == "all_urls" || ext2 {
+					mapPrint(fmt.Sprintf("[*] Out Scope URLs | %d", len(RESULTS.OutScopeURLs)), RESULTS.OutScopeURLs)
+				}
+				if q == "cdn" || ext2 {
+					mapPrint(fmt.Sprintf("[*] CDNs | %d", len(RESULTS.CDNs)), RESULTS.CDNs)
+				}
+				if q == "script" || ext2 {
+					mapPrint(fmt.Sprintf("[*] Scripts | %d", len(RESULTS.Scripts)), RESULTS.Scripts)
+				}
+				if q == "css" || ext2 {
+					mapPrint(fmt.Sprintf("[*] CSS | %d", len(RESULTS.CSS)), RESULTS.CSS)
+				}
+				if q == "media" || ext2 {
+					mapPrint(fmt.Sprintf("[*] Media | %d", len(RESULTS.Medias)), RESULTS.Medias)
+				}
+				if q == "dns" || ext2 {
+					findHostnames()
+					slicePrint(fmt.Sprintf("[*] HostNames | %d", len(RESULTS.HostNames)), RESULTS.HostNames)
+				}
+				if q == "network" || ext2 {
+					findNetworks()
+					mapPrint(fmt.Sprintf("[*] Social Networks | %d", len(RESULTS.Networks)), RESULTS.Networks)
+				}
+				if q == "query_urls" || ext2 {
+					mapPrint(fmt.Sprintf("[*] Get URLs | %d", len(RESULTS.QueryURLs)), RESULTS.QueryURLs)
+				}
+				if q == "phones" || ext2 {
+					mapPrint(fmt.Sprintf("[*] Phones | %d", len(RESULTS.Phones)), RESULTS.Phones)
+				}
+				if !sliceSearch(&ALL_KEYS, q) {
+					var medias []string
+					for k := range RESULTS.Medias {
+						if checkPostfix(q, k) {
+							medias = append(medias, k)
+						}
+					}
+					slicePrint(fmt.Sprintf("[*] '%s' | %d", q, len(medias)), medias)
+				}
 			}
 		}
-		PROG.Gui.DeleteView("LOADER")
 		PROG.currentPage = vrb.Buffer()
 		return nil
 	})
