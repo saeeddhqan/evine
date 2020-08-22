@@ -12,5 +12,5 @@ Initial release
 ## 0.1.2 2020.08.22
 * Add JQuery element selector to extract nodes
 * Fix status line problems
-* Fix file extention upper and lower case-sensitive problem
+* Fix file extension upper and lower case-sensitive problem
 * Rename the keys option and view to the query option
