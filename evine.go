@@ -16,11 +16,10 @@ along with this program.  If not, see <http://www.gnu.org/licenses/>.
 package main
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/PuerkitoBio/goquery"
-	"github.com/jroimartin/gocui"
 	"io/ioutil"
 	"net/http"
 	"net/url"
@@ -31,6 +30,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/PuerkitoBio/goquery"
+	"github.com/jroimartin/gocui"
 )
 
 // Metadata
@@ -42,6 +44,7 @@ type Options struct {
 	Robots            bool
 	Sitemap           bool
 	WayBack           bool
+	IgnoreInvalidSSL  bool
 	Thread            int
 	Timeout           int
 	Delay             int
@@ -218,16 +221,18 @@ func statusCodeExcluding(code int) bool {
 func request(uri string) (string, int, error) {
 	client := &http.Client{
 		Timeout: time.Duration(OPTIONS.Timeout) * time.Second}
+	Httptransport := &http.Transport{}
 	if OPTIONS.Proxy != "" {
 		proxy, er := url.Parse(OPTIONS.Proxy)
 		if er != nil {
 			return "", 0, er
 		}
-		proxyTransport := &http.Transport{
-			Proxy: http.ProxyURL(proxy),
-		}
-		client.Transport = proxyTransport
+		Httptransport.Proxy = http.ProxyURL(proxy)
 	}
+	if OPTIONS.IgnoreInvalidSSL == true {
+		Httptransport.TLSClientConfig = &tls.Config{InsecureSkipVerify: true}
+	}
+	client = &http.Client{Transport: Httptransport}
 	req, er := http.NewRequest("GET", trim(uri), nil)
 	if er != nil {
 		return "", 0, er
@@ -543,6 +548,7 @@ func parseOptions() {
 	flag.BoolVar(&OPTIONS.Robots, "robots", false, "Scrape robots.txt for URLs and using them as seeds")
 	flag.BoolVar(&OPTIONS.Sitemap, "sitemap", false, "Scrape sitemap.xml for URLs and using them as seeds")
 	flag.BoolVar(&OPTIONS.WayBack, "wayback", false, "Scrape WayBackURLs(web.archive.org) for URLs and using them as seeds")
+	flag.BoolVar(&OPTIONS.IgnoreInvalidSSL, "Ignore-SSL", false, "Ignore invalid SSL")
 	flag.StringVar(&OPTIONS.Query, "query", "", `Query expression(It could be a file extension(pdf), a key query(url,script,css,..) or a jquery selector($("a[class='hdr']).attr('hdr')")))`)
 	flag.StringVar(&OPTIONS.Proxy, "proxy", "", "Proxy by scheme://ip:port")
 	flag.StringVar(&OPTIONS.Headers, "header", "", "HTTP Header for each request(It should to separated fields by \\n). e.g KEY: VALUE\\nKEY1: VALUE1")
@@ -571,10 +577,10 @@ func optionsCode() string {
 		}
 		return "false"
 	}
-	return fmt.Sprintf("thread,depth,delay,timeout,maxRegexResult=%d,%d,%d,%d,%d\nrobots,sitemap,wayback=%s,%s,%s\nurlExclude=%s\ncodeExclude=%s\ndomainExclude=%s\nproxy=%s",
+	return fmt.Sprintf("thread,depth,delay,timeout,maxRegexResult=%d,%d,%d,%d,%d\nrobots,sitemap,wayback=%s,%s,%s\nurlExclude=%s\ncodeExclude=%s\ndomainExclude=%s\nproxy=%s\nIgnoreInvalidSSL=%s",
 		OPTIONS.Thread, OPTIONS.Depth, OPTIONS.Delay, OPTIONS.Timeout, OPTIONS.MaxRegexResult,
 		B2S(OPTIONS.Robots), B2S(OPTIONS.Sitemap), B2S(OPTIONS.WayBack), OPTIONS.URLExclude,
-		OPTIONS.StatusCodeExclude, OPTIONS.InScopeExclude, OPTIONS.Proxy)
+		OPTIONS.StatusCodeExclude, OPTIONS.InScopeExclude, OPTIONS.Proxy, B2S(OPTIONS.IgnoreInvalidSSL))
 }
 
 // Read the options from the option View and set them
@@ -621,6 +627,8 @@ func prepareOptions() string {
 			OPTIONS.InScopeDomains = strings.Split(values, ",")
 		case 5:
 			OPTIONS.Proxy = values
+		case 6:
+			OPTIONS.IgnoreInvalidSSL = S2B(values)
 		}
 	}
 	// Prepare the URLs channel for crawl
