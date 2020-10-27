@@ -12,6 +12,8 @@ Evine is useful for a wide range of purposes such as metadata and data extractio
 
 Follow the project on [Twitter](https://twitter.com/EvineProject).
 
+If you like the project, give it a star. It forces me to develop the project!
+
 
 ## Install
 
