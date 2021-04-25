@@ -14,3 +14,6 @@ Initial release
 * Fix status line problems
 * Fix file extension upper and lower case-sensitive problem
 * Rename the keys option and view to the query option
+## 0.1.3 2021.04.25
+* Add logger option
+* Add timestamp to the saved file.

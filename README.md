@@ -68,6 +68,7 @@ It will displays help for the tool:
 | -timeout int | Seconds to wait before timing out (default 10) | evine -timeout 15 | 
 | -query string | JQuery expression(It could be a file extension(pdf), a key query(url,script,css,..) or a jquery selector($("a[class='hdr']).attr('hdr')"))) | evine -query url,pdf,txt |
 | -regex string | Search the Regular Expression on the page contents | evine -regex 'User.+' |
+| -logger string | Log errors in a file | evine -logger log.txt | 
 | -max-regex int | Max result of regex search for regex field (default 1000) | evine -max-regex -1 | 
 | -robots | Scrape robots.txt for URLs and using them as seeds | evine -robots |
 | -sitemap | Scrape sitemap.xml for URLs and using them as seeds | evine -sitemap |
