@@ -4,12 +4,10 @@ go:
   - master
 os:
   - linux
-  - darwin
   - freebsd
   - osx
 script:
   - test -z "$(go get -a)"
-  - test -z "$(gofmt -l ./)"
   - test -z "$(go vet -v ./...)"
   - go test ./...
   - go build
