@@ -10,8 +10,6 @@ Evine is useful for a wide range of purposes such as metadata and data extractio
 
 [![asciicast](https://asciinema.org/a/351624.svg)](https://asciinema.org/a/351624)
 
-Follow the project on [Twitter](https://twitter.com/EvineProject).
-
 If you like the project, give it a star. It forces me to develop the project!
 
 
@@ -51,7 +49,7 @@ Keybinding                              | Description
 ```bash
 evine -h
 ```
-It will displays help for the tool:
+It will display help for the tool:
 
 | flag | Description | Example |
 |------|-------------|---------|
