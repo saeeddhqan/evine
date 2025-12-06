@@ -1413,8 +1413,12 @@ func getSource(uri string) ([]string, error) {
 		return []string{}, nil
 	}
 	putting(VIEWS_OBJ["RESPONSE"], " > " + uri)
+	// create a lock to prevent occasional crashing when fetching a large volume of results
+	MUTEX.Lock()
 	RESULTS.Pages += text
 	RESULTS.PageByURL[uri] = text
+	MUTEX.Unlock()
+	// unlocked here
 	allURLs := getURLs(text)
 	allURLs = urlCategory(allURLs)
 	refStatusLine(fmt.Sprintf("[Elapsed:%fs] | [Obtained:%d] | [%s]", sinceTime(), len(RESULTS.URLs), uri))
